@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Campagne SMS{% endblock %}
+
+{% block content %}
+
+<h2 class="text-3xl font-bold text-green-600 mb-6">
+    Campagne via Excel
+</h2>
+
+<a href="{% url 'download_model' %}"
+   class="bg-gray-700 text-white px-4 py-2 rounded-lg mb-6 inline-block">
+   Télécharger le modèle Excel
+</a>
+
+{% if error %}
+<div class="bg-red-100 text-red-700 p-3 rounded mb-4">
+    {{ error }}
+</div>
+{% endif %}
+
+{% if success %}
+<div class="bg-green-100 text-green-700 p-3 rounded mb-4">
+    {{ success }}
+</div>
+{% endif %}
+
+<form method="POST" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+
+    <div>
+        <label class="block font-semibold mb-2">Message général</label>
+        <textarea name="message" id="campaignMessage"
+            class="w-full border rounded-lg p-3"></textarea>
+    </div>
+
+    <div>
+        <label class="block font-semibold mb-2">Fichier Excel</label>
+        <input type="file" name="file"
+            class="w-full border rounded-lg p-3">
+    </div>
+
+    <div class="bg-gray-100 p-4 rounded-lg">
+        <p>Caractères : <span id="campaignCharCount">0</span></p>
+        <p>SMS par destinataire : <span id="campaignSmsCount">0</span></p>
+    </div>
+
+    <div>
+        <label class="block font-semibold mb-2">Date de programmation (optionnel)</label>
+        <input type="datetime-local" name="scheduled_at" class="w-full border rounded-lg p-3">
+    </div>
+
+
+    <button type="submit"
+        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+        Lancer la campagne
+    </button>
+</form>
+
+<script>
+const option = document.getElementById("scheduleOption");
+const fields = document.getElementById("scheduleFields");
+
+option.addEventListener("change", function() {
+    fields.classList.toggle("hidden", this.value !== "later");
+});
+</script>
+
+
+<script>
+const campaignMessage = document.getElementById("campaignMessage");
+const campaignCharCount = document.getElementById("campaignCharCount");
+const campaignSmsCount = document.getElementById("campaignSmsCount");
+
+campaignMessage.addEventListener("input", function() {
+    const length = campaignMessage.value.length;
+    campaignCharCount.innerText = length;
+
+    const smsParts = Math.ceil(length / 160) || 0;
+    campaignSmsCount.innerText = smsParts;
+});
+</script>
+
+{% endblock %}

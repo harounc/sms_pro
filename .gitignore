@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual environment
+venv/
+.env
+
+# Django
+db.sqlite3
+media/
+
+# Node
+node_modules/
+
+# Tailwind build
+static/css/output.css
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

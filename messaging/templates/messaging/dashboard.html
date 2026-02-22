@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<h2 class="text-3xl font-bold text-green-600 mb-6">
+    Dashboard
+</h2>
+
+<!-- Filtres -->
+<div class="mb-6 space-x-4">
+
+    {% if period == "1" %}
+        <a href="?period=1"
+           class="px-4 py-2 rounded bg-green-600 text-white">
+            Aujourd’hui
+        </a>
+    {% else %}
+        <a href="?period=1"
+           class="px-4 py-2 rounded bg-gray-200">
+            Aujourd’hui
+        </a>
+    {% endif %}
+
+    {% if period == "7" %}
+        <a href="?period=7"
+           class="px-4 py-2 rounded bg-green-600 text-white">
+            7 jours
+        </a>
+    {% else %}
+        <a href="?period=7"
+           class="px-4 py-2 rounded bg-gray-200">
+            7 jours
+        </a>
+    {% endif %}
+
+    {% if period == "30" %}
+        <a href="?period=30"
+           class="px-4 py-2 rounded bg-green-600 text-white">
+            30 jours
+        </a>
+    {% else %}
+        <a href="?period=30"
+           class="px-4 py-2 rounded bg-gray-200">
+            30 jours
+        </a>
+    {% endif %}
+
+</div>
+
+<!-- Cartes -->
+<div class="grid grid-cols-4 gap-6 mb-10">
+
+    <div class="bg-white shadow rounded-lg p-6 text-center">
+        <p class="text-gray-500">Solde</p>
+        <p class="text-2xl font-bold text-green-600">
+            {{ balance }} crédits
+        </p>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6 text-center">
+        <p class="text-gray-500">Total SMS (période)</p>
+        <p class="text-2xl font-bold text-orange-500">
+            {{ total_sms }}
+        </p>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6 text-center">
+        <p class="text-gray-500">SMS aujourd’hui</p>
+        <p class="text-2xl font-bold text-blue-600">
+            {{ sms_today }}
+        </p>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6 text-center">
+        <p class="text-gray-500">Total dépensé</p>
+        <p class="text-2xl font-bold text-red-600">
+            {{ total_spent|floatformat:2 }} crédits
+        </p>
+    </div>
+
+</div>
+
+<!-- Graphique -->
+<div class="bg-white p-6 rounded-lg shadow">
+    <h3 class="text-xl font-bold mb-4">
+        SMS envoyés (période sélectionnée)
+    </h3>
+    <canvas id="smsChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const dailyData = {{ daily_data|safe }};
+
+const labels = dailyData.map(item => item.date);
+const data = dailyData.map(item => item.count);
+
+const ctx = document.getElementById('smsChart').getContext('2d');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'SMS envoyés',
+            data: data,
+            backgroundColor: '#16a34a'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+</script>
+
+{% endblock %}

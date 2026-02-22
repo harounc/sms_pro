@@ -1,0 +1,41 @@
+<aside class="w-64 bg-white min-h-screen shadow">
+
+    <div class="p-6 font-bold text-gray-700 border-b">
+        Menu
+    </div>
+
+    <ul class="p-4 space-y-3">
+
+        <li>
+            <a href="{% url 'dashboard' %}"
+               class="block px-4 py-2 rounded hover:bg-green-100">
+                Dashboard
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'send_sms' %}"
+               class="block px-4 py-2 rounded hover:bg-orange-100">
+                SMS Simple
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'campaign_upload' %}"
+               class="block px-4 py-2 rounded hover:bg-blue-100">
+                Campagne
+            </a>
+        </li>
+
+        {% if request.user.role == "admin" %}
+        <li>
+            <a href="{% url 'admin_dashboard' %}"
+               class="block px-4 py-2 rounded hover:bg-purple-100">
+                Admin Global
+            </a>
+        </li>
+        {% endif %}
+
+    </ul>
+
+</aside>

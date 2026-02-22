@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}SMS Platform{% endblock %}</title>
+
+    <!-- Tailwind (temporaire CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            font-family: Georgia, serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Navbar -->
+    {% include "partials/navbar.html" %}
+
+    <div class="flex">
+
+        <!-- Sidebar -->
+        {% include "partials/sidebar.html" %}
+
+        <!-- Main content -->
+        <main class="flex-1 p-8">
+            {% block content %}
+            {% endblock %}
+        </main>
+
+    </div>
+
+</body>
+</html>
