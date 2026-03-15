@@ -1,11 +1,13 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
 from messaging.models import Message
 from messaging.services import send_sms
 
 
 class Command(BaseCommand):
     help = "Envoie les SMS programmés"
+
 
     def handle(self, *args, **kwargs):
 
@@ -16,9 +18,11 @@ class Command(BaseCommand):
             scheduled_at__lte=now
         )
 
+        count = 0
+
         for msg in scheduled_messages:
 
-            send_sms(
+            result = send_sms(
                 msg.user,
                 msg.phone,
                 msg.message,
@@ -26,6 +30,17 @@ class Command(BaseCommand):
                 msg.campaign
             )
 
-            msg.delete()
+            if result["success"]:
 
-        self.stdout.write("SMS programmés traités.")
+                msg.status = "sent"
+                msg.sent_at = timezone.now()
+                msg.save()
+
+                count += 1
+
+            else:
+
+                msg.status = "failed"
+                msg.save()
+
+        self.stdout.write(self.style.SUCCESS(f"{count} SMS programmés envoyés."))

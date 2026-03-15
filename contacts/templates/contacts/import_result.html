@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="max-w-5xl mx-auto">
+
+<h2 class="text-2xl font-bold mb-6">
+Résultat de l'import
+</h2>
+
+<div class="bg-white shadow rounded-lg p-6 mb-6">
+
+<p class="mb-2">
+    <strong>Ligne du fichier :</strong>
+    <span class="text-gray-700">{{ total_rows }}</span>
+</p>
+
+<p class="mb-2">
+<strong>Contacts importés :</strong>
+<span class="text-green-600">{{ created }}</span>
+</p>
+
+<p class="mb-2">
+<strong>Doublons :</strong>
+<span class="text-orange-600">{{ duplicates|length }}</span>
+</p>
+
+<p>
+<strong>Numéros invalides :</strong>
+<span class="text-red-600">{{ invalid|length }}</span>
+</p>
+
+</div>
+
+{% if duplicates %}
+<div class="bg-orange-50 border border-orange-200 p-4 rounded mb-6">
+
+<h3 class="font-semibold mb-2">
+Numéros doublons
+</h3>
+
+<ul class="list-disc pl-5">
+
+{% for phone in duplicates %}
+<li>{{ phone }}</li>
+{% endfor %}
+
+</ul>
+
+</div>
+{% endif %}
+
+
+{% if invalid %}
+<div class="bg-red-50 border border-red-200 p-4 rounded mb-6">
+
+<h3 class="font-semibold mb-2">
+Numéros invalides
+</h3>
+
+<ul class="list-disc pl-5">
+
+{% for phone in invalid %}
+<li>{{ phone }}</li>
+{% endfor %}
+
+</ul>
+
+</div>
+{% endif %}
+
+
+<a href="{% url 'contact_group_detail' group.id %}"
+class="bg-green-600 text-white px-4 py-2 rounded">
+Retour au groupe
+</a>
+
+</div>
+
+{% endblock %}

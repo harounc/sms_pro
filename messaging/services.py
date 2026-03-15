@@ -1,7 +1,10 @@
 import math
 from django.utils import timezone
-from core.models import Transaction
+from django.db import transaction
+
+from accounts.models import CompanyTransaction, UserCreditTransaction
 from messaging.models import Message
+
 
 SMS_PRICE = 19  # Prix d'un SMS
 
@@ -17,12 +20,14 @@ def send_sms(user, phone, text, message_type='simple', campaign=None, scheduled_
     sms_parts = math.ceil(len(text) / 160)
     total_cost = sms_parts * SMS_PRICE
 
-    # 💰 Vérification solde
-    if company.balance < total_cost:
-        return {"success": False, "error": "Solde insuffisant."}
-    
-
-    # Simulation API OK
+    # 💰 Vérification solde (uniquement si envoi immédiat)
+    if not scheduled_at:
+        if user.role == 'user':
+            if user.credit_balance < total_cost:
+                return {"success": False, "error": "Crédit utilisateur insuffisant."}
+        else:
+            if company.balance < total_cost:
+                return {"success": False, "error": "Solde insuffisant."}
 
     # 🕐 Si planifié → on n’envoie pas maintenant
     if scheduled_at:
@@ -39,28 +44,42 @@ def send_sms(user, phone, text, message_type='simple', campaign=None, scheduled_
         )
         return {"success": True, "message": "Message planifié avec succès."}
 
-    # Sinon envoi immédiat
-    Message.objects.create(
-        user=user,
-        company=company,
-        campaign=campaign,
-        phone=phone,
-        message=text,
-        message_type=message_type,
-        status='sent',
-        cost=total_cost,
-        sent_at=timezone.now()
-    )
+    # ⚡ Envoi immédiat sécurisé (transaction DB)
+    with transaction.atomic():
 
-    # Déduire solde
-    company.balance -= total_cost
-    company.save()
+        # Création message
+        Message.objects.create(
+            user=user,
+            company=company,
+            campaign=campaign,
+            phone=phone,
+            message=text,
+            message_type=message_type,
+            status='sent',
+            cost=total_cost,
+            sent_at=timezone.now()
+        )
 
-    Transaction.objects.create(
-        company=company,
-        amount=total_cost,
-        transaction_type='debit',
-        description=f"SMS envoyé à {phone} ({sms_parts} SMS)"
-    )
+        if user.role == 'user':
+            user.credit_balance -= total_cost
+            user.save(update_fields=['credit_balance'])
+
+            UserCreditTransaction.objects.create(
+                company=company,
+                user=user,
+                amount=total_cost,
+                transaction_type='debit',
+                description=f"SMS envoyé à {phone} ({sms_parts} SMS)"
+            )
+        else:
+            company.balance -= total_cost
+            company.save(update_fields=['balance'])
+
+            CompanyTransaction.objects.create(
+                company=company,
+                amount=total_cost,
+                transaction_type='debit',
+                description=f"SMS envoyé à {phone} ({sms_parts} SMS)"
+            )
 
     return {"success": True}

@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}Historique{% endblock %}
+
+{% block content %}
+
+<h2 class="text-3xl font-bold text-green-600 mb-6">
+    Historique des envois
+</h2>
+
+<form method="GET" class="bg-white shadow rounded-lg p-6 mb-6">
+
+    <div class="grid grid-cols-5 gap-4">
+
+        <div>
+            <label class="block text-sm font-semibold mb-2">Type</label>
+            <select name="type" class="w-full border rounded-lg p-2">
+                <option value="" {% if not type %}selected{% endif %}>Tous</option>
+                <option value="simple" {% if type == 'simple' %}selected{% endif %}>Simple</option>
+                <option value="campaign" {% if type == 'campaign' %}selected{% endif %}>Campagne</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2">Statut</label>
+            <select name="status" class="w-full border rounded-lg p-2">
+                <option value="" {% if not status %}selected{% endif %}>Tous</option>
+                <option value="scheduled" {% if status == 'scheduled' %}selected{% endif %}>Planifié</option>
+                <option value="sent" {% if status == 'sent' %}selected{% endif %}>Envoyé</option>
+                <option value="failed" {% if status == 'failed' %}selected{% endif %}>Échec</option>
+                <option value="pending" {% if status == 'pending' %}selected{% endif %}>En attente</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2">Téléphone</label>
+            <input type="text"
+                   name="phone"
+                   value="{{ phone }}"
+                   class="w-full border rounded-lg p-2"
+                   placeholder="+225...">
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2">Début</label>
+            <input type="date"
+                   name="start"
+                   value="{{ start }}"
+                   class="w-full border rounded-lg p-2">
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2">Fin</label>
+            <input type="date"
+                   name="end"
+                   value="{{ end }}"
+                   class="w-full border rounded-lg p-2">
+        </div>
+
+    </div>
+
+    <div class="flex items-center gap-3 mt-5">
+
+        <button type="submit"
+                class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg">
+            Filtrer
+        </button>
+
+        <a href="{% url 'message_history' %}"
+           class="px-5 py-2 rounded-lg border hover:bg-gray-50">
+            Réinitialiser
+        </a>
+
+        <a href="?{{ request.GET.urlencode }}&export=csv"
+           class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+            Télécharger CSV
+        </a>
+
+    </div>
+
+</form>
+
+
+<div class="bg-white shadow rounded-lg overflow-x-auto">
+
+<table class="min-w-full table-auto border-collapse">
+
+<thead>
+
+<tr class="bg-gray-100 text-sm">
+
+<th class="p-3 text-left">Créé</th>
+<th class="p-3 text-left">Type</th>
+<th class="p-3 text-left">Statut</th>
+<th class="p-3 text-left">Téléphone</th>
+<th class="p-3 text-left">Message</th>
+<th class="p-3 text-left">Coût</th>
+<th class="p-3 text-left">Programmé</th>
+<th class="p-3 text-left">Envoyé</th>
+<th class="p-3 text-left">Campagne</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for m in messages %}
+
+<tr class="border-b hover:bg-gray-50">
+
+<td class="p-3 text-sm text-gray-700">
+{{ m.created_at|date:"d/m/Y H:i" }}
+</td>
+
+
+<td class="p-3 text-sm">
+
+{% if m.message_type == "campaign" %}
+
+<span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-semibold">
+Campagne
+</span>
+
+{% else %}
+
+<span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold">
+Simple
+</span>
+
+{% endif %}
+
+</td>
+
+
+<td class="p-3 text-sm">
+
+{% if m.status == "sent" %}
+<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+Envoyé
+</span>
+
+{% elif m.status == "scheduled" %}
+<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+Planifié
+</span>
+
+{% elif m.status == "failed" %}
+<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+Échec
+</span>
+
+{% elif m.status == "pending" %}
+<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">
+En attente
+</span>
+
+{% endif %}
+
+</td>
+
+
+<td class="p-3 text-sm text-gray-700">
+{{ m.phone }}
+</td>
+
+
+<td class="p-3 text-sm text-gray-700 max-w-xs truncate">
+{{ m.message }}
+</td>
+
+
+<td class="p-3 text-sm text-gray-700">
+{{ m.cost|floatformat:2 }}
+</td>
+
+
+<td class="p-3 text-sm text-gray-700">
+
+{% if m.scheduled_at %}
+{{ m.scheduled_at|date:"d/m/Y H:i" }}
+{% endif %}
+
+</td>
+
+
+<td class="p-3 text-sm text-gray-700">
+
+{% if m.sent_at %}
+{{ m.sent_at|date:"d/m/Y H:i" }}
+{% endif %}
+
+</td>
+
+
+<td class="p-3 text-sm text-gray-700">
+
+{% if m.campaign %}
+<span class="text-purple-700 font-semibold">
+{{ m.campaign.name }}
+</span>
+{% else %}
+-
+{% endif %}
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td class="p-6 text-center text-gray-500" colspan="9">
+Aucun résultat trouvé.
+</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+
+<!-- Pagination -->
+
+<div class="flex justify-center mt-6">
+
+{% if page_obj.has_previous %}
+
+<a href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}"
+class="px-4 py-2 border rounded-l bg-white hover:bg-gray-100">
+Précédent
+</a>
+
+{% endif %}
+
+<span class="px-4 py-2 border bg-gray-100">
+Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+</span>
+
+{% if page_obj.has_next %}
+
+<a href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}"
+class="px-4 py-2 border rounded-r bg-white hover:bg-gray-100">
+Suivant
+</a>
+
+{% endif %}
+
+</div>
+
+{% endblock %}

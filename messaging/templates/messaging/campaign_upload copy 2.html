@@ -4,22 +4,19 @@
 {% block content %}
 
 <h2 class="text-3xl font-bold text-green-600 mb-6">
-Campagne SMS
+    Campagne SMS
 </h2>
 
 <a href="{% url 'download_model' %}"
-class="bg-gray-700 text-white px-4 py-2 rounded-lg mb-6 inline-block">
-Télécharger le modèle Excel
+   class="bg-gray-700 text-white px-4 py-2 rounded-lg mb-6 inline-block">
+   Télécharger le modèle Excel
 </a>
-
 
 <form method="POST" enctype="multipart/form-data" class="space-y-6">
 {% csrf_token %}
 
-
 <!-- NOM CAMPAGNE -->
 <div>
-
 <label class="block font-semibold mb-2">
 Nom de la campagne <span class="text-red-500">*</span>
 </label>
@@ -28,7 +25,6 @@ Nom de la campagne <span class="text-red-500">*</span>
 name="campaign_name"
 required
 class="w-full border rounded-lg p-3">
-
 </div>
 
 
@@ -79,7 +75,7 @@ class="w-full border rounded-lg p-3">
 </div>
 
 
-<!-- GROUPE CONTACT (alternative) -->
+<!-- GROUPE CONTACT -->
 <div>
 
 <label class="block font-semibold mb-2">
@@ -87,10 +83,9 @@ Groupe de contacts
 </label>
 
 <select name="contact_group"
-id="contactGroupSelect"
 class="w-full border rounded-lg p-3">
 
-<option value="">Choisir un groupe</option>
+<option value="">Sélectionnez un groupe</option>
 
 {% for group in contact_groups %}
 <option value="{{ group.id }}">
@@ -173,20 +168,14 @@ class="w-full border rounded-lg p-3"></textarea>
 <!-- STATS -->
 <div class="bg-gray-100 p-4 rounded-lg">
 
-<p>
-Caractères :
-<span id="campaignCharCount">0</span>
-</p>
+<p>Caractères :
+<span id="campaignCharCount">0</span></p>
 
-<p>
-SMS par destinataire :
-<span id="campaignSmsCount">0</span>
-</p>
+<p>SMS par destinataire :
+<span id="campaignSmsCount">0</span></p>
 
-<p>
-Nombre de numéros valides :
-<span id="campaignValidNumbers">0</span>
-</p>
+<p>Nombre de numéros valides :
+<span id="campaignValidNumbers">0</span></p>
 
 <p id="campaignEstimatedCostWrapper"
 class="font-bold text-green-600">
@@ -209,12 +198,17 @@ Enregistrer comme modèle
 <div class="flex gap-6">
 
 <label class="flex items-center gap-2">
-<input type="radio" name="save_template" value="no" checked>
+<input type="radio"
+name="save_template"
+value="no"
+checked>
 Non
 </label>
 
 <label class="flex items-center gap-2">
-<input type="radio" name="save_template" value="yes">
+<input type="radio"
+name="save_template"
+value="yes">
 Oui
 </label>
 
@@ -235,7 +229,6 @@ Envoyer la campagne
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-
 <script>
 
 const SMS_PRICE = 19
@@ -252,7 +245,6 @@ const excelValidNumbers = document.getElementById("excelValidNumbers")
 const excelInvalidNumbers = document.getElementById("excelInvalidNumbers")
 
 const messageInput = document.getElementById("campaignMessage")
-const templateSelect = document.getElementById("templateSelect")
 
 const charCount = document.getElementById("campaignCharCount")
 const smsCount = document.getElementById("campaignSmsCount")
@@ -268,7 +260,7 @@ const messageLength = messageInput.value.length
 
 charCount.innerText = messageLength
 
-const smsParts = Math.ceil(messageLength / 160) || 0
+const smsParts = Math.ceil(messageLength / 320) || 0
 
 smsCount.innerText = smsParts
 
@@ -282,24 +274,6 @@ estimatedCost.innerText = totalCost.toFixed(0)
 
 
 messageInput.addEventListener("input", calculateStats)
-
-
-
-/* AUTO REMPLISSAGE MODELE */
-
-templateSelect.addEventListener("change", function(){
-
-const message = this.value
-
-if(message){
-
-messageInput.value = message
-
-calculateStats()
-
-}
-
-})
 
 
 
@@ -363,52 +337,6 @@ calculateStats()
 })
 
 </script>
-
-
-<script>
-
-const contactGroupSelect = document.getElementById("contactGroupSelect")
-
-if(contactGroupSelect){
-
-contactGroupSelect.addEventListener("change", function(){
-
-const groupId = this.value
-
-if(!groupId){
-return
-}
-
-fetch(`/contacts/groups-stats/?group_id=${groupId}`)
-
-.then(response => response.json())
-
-.then(data => {
-
-excelSummary.classList.remove("hidden")
-
-excelFileName.innerText = "Groupe de contacts"
-
-excelTotalRows.innerText = data.total
-
-excelValidNumbers.innerText = data.valid
-
-excelInvalidNumbers.innerText = data.invalid
-
-validRecipientsCount = data.valid
-
-calculateStats()
-
-})
-
-.catch(error => console.log(error))
-
-})
-
-}
-
-</script>
-
 
 
 {% endblock %}

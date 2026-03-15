@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="max-w-7xl mx-auto">
+
+<!-- Titre -->
+
+<div class="flex justify-between items-center mb-6 bg-orange-500 text-white px-6 py-4 rounded-lg shadow">
+
+    <h2 class="text-xl font-semibold text-white">
+        Contacts du groupe : {{ group.name }}
+    </h2>
+
+    <p class="text-sm text-orange-100">
+        Total : {{ contacts|length }} contacts
+    </p>
+
+<a href="{% url 'contact_groups_list' %}"
+class="bg-white text-orange-600 hover:bg-gray-100 px-4 py-2 rounded font-medium">
+
+Retour
+</a>
+
+</div>
+
+
+<!-- MESSAGE FLASH -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="mb-4 p-4 bg-{{ message.tags }}-100 border border-{{ message.tags }}-300 text-{{ message.tags }}-700 rounded">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+
+
+
+<!-- INFO -->
+
+<div class="bg-gray-100 border border-gray-300 text-gray-700 p-4 rounded mb-6">
+
+Ajouter directement un contact ou importer des contacts à partir d'un fichier Excel.
+
+</div>
+
+
+
+<div class="grid grid-cols-3 gap-6">
+
+<!-- FORMULAIRE CONTACT -->
+
+<div class="col-span-1 bg-white shadow rounded-lg p-6 border border-gray-200">
+
+<h3 class="text-lg font-semibold mb-4 text-gray-800">
+Ajouter un contact
+</h3>
+
+<form method="POST" action="{% url 'contact_create' group.id %}">
+
+{% csrf_token %}
+
+<label class="block text-sm mb-1 text-gray-600">Téléphone</label>
+
+<input type="text"
+name="phone"
+placeholder="2250700000000"
+class="w-full border border-gray-300 rounded p-2 mb-4 focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
+
+
+<label class="block text-sm mb-1 text-gray-600">Nom</label>
+
+<input type="text"
+name="name"
+placeholder="John Doe"
+class="w-full border border-gray-300 rounded p-2 mb-4 focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
+
+
+<label class="block text-sm mb-1 text-gray-600">Email</label>
+
+<input type="email"
+name="email"
+placeholder="john@email.com"
+class="w-full border border-gray-300 rounded p-2 mb-4 focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
+
+
+<button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded">
+Enregistrer
+</button>
+
+</form>
+
+</div>
+
+
+
+<!-- TABLE CONTACTS -->
+
+<div class="col-span-2 bg-white shadow rounded-lg p-6 border border-gray-200">
+
+<div class="flex justify-between items-center mb-4">
+
+<h3 class="text-lg font-semibold text-gray-800">
+Contacts
+</h3>
+
+<a href="{% url 'contacts_import_excel' group.id %}"
+class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">
+Importer Excel
+</a>
+
+</div>
+
+
+
+<!-- RECHERCHE CONTACTS -->
+<div class="flex justify-between items-center mb-4"> 
+
+    <input
+        type="text"
+        placeholder="Rechercher un contact..."
+        class="border border-gray-300 rounded px-3 py-2 w-64 focus:ring-2 focus:ring-orange-400">
+    <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">
+        Rechercher
+    </button>
+
+</div>
+
+<div class="overflow-x-auto">
+
+<table class="w-full border border-gray-200">
+
+<thead class="bg-gray-100">
+
+<tr>
+
+<th class="p-3 text-left text-gray-700">#</th>
+<th class="p-3 text-left text-gray-700">Téléphone</th>
+<th class="p-3 text-left text-gray-700">Nom</th>
+<th class="p-3 text-left text-gray-700">Email</th>
+<th class="p-3 text-left text-gray-700">Action</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+{% for contact in contacts %}
+
+<tr class="border-t hover:bg-gray-50">
+
+<td class="p-3">
+{{ forloop.counter }}
+</td>
+
+<td class="p-3 font-medium text-gray-800">
+{{ contact.phone }}
+</td>
+
+<td class="p-3">
+{{ contact.name|default:"-" }}
+</td>
+
+<td class="p-3">
+{{ contact.email|default:"-" }}
+</td>
+
+<td class="p-3 flex gap-3">
+
+<a href="{% url 'contact_edit' contact.id %}"
+    class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-sm">
+    Modifier
+</a>
+
+<a href="{% url 'contact_delete' contact.id %}"
+class="bg-gray-100 hover:bg-red-200 px-3 py-1 rounded text-sm text-red-600">
+Supprimer
+</a>
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="5" class="p-4 text-gray-500 text-center">
+Aucun contact dans ce groupe
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+</div>
+
+</div>
+
+{% endblock %}

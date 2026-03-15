@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-2xl font-bold mb-6">Entreprise créée avec succès</h2>
+
+<div class="bg-white p-6 rounded shadow max-w-lg">
+
+    <p><strong>Entreprise :</strong> {{ company.name }}</p>
+    <p><strong>Login admin :</strong> {{ username }}</p>
+    <p><strong>Mot de passe :</strong> {{ password }}</p>
+
+    <div class="mt-4">
+        <a href="{% url 'company_list' %}"
+           class="bg-green-600 text-white px-4 py-2 rounded">
+            Retour à la liste
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

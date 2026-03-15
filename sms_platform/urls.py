@@ -18,6 +18,7 @@ Including another URLconf
 from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from django.contrib import admin
+from core.views import redirect_after_login
 
 
 urlpatterns = [
@@ -30,13 +31,22 @@ urlpatterns = [
 
     path('logout/', auth_views.LogoutView.as_view(
         next_page='login'
-    ), name='logout'),    
+    ), name='logout'),
+
+    # Redirection après connexion
+    path('redirect/', redirect_after_login, name='redirect_after_login'),    
 
     # Messaging
     path('messaging/', include('messaging.urls')),
 
- 
+    # Accounts
+    path('accounts/', include('accounts.urls')),
 
+
+    # Contacts
+    path('contacts/', include('contacts.urls')),
+
+    
     # Password Reset
     path('password-reset/',
          auth_views.PasswordResetView.as_view(

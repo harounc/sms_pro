@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="mb-4 p-4 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<h2 class="text-2xl font-bold mb-6">
+    {% if is_edit %}
+        Modifier utilisateur - {{ company.name }}
+    {% else %}
+        Nouvel utilisateur - {{ company.name }}
+    {% endif %}
+</h2>
+
+<form method="post" class="bg-white p-6 rounded shadow-md max-w-lg">
+    {% csrf_token %}
+
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+            <div class="text-red-600 text-sm mt-1">{{ form.username.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+            <div class="text-red-600 text-sm mt-1">{{ form.email.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Prénoms</label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}
+            <div class="text-red-600 text-sm mt-1">{{ form.first_name.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Nom</label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}
+            <div class="text-red-600 text-sm mt-1">{{ form.last_name.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Rôle</label>
+        {{ form.role }}
+        {% if form.role.errors %}
+            <div class="text-red-600 text-sm mt-1">{{ form.role.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Mot de passe{% if is_edit %} (laisser vide pour ne pas changer){% endif %}</label>
+        {{ form.password }}
+        {% if form.password.errors %}
+            <div class="text-red-600 text-sm mt-1">{{ form.password.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-4 flex items-center space-x-2">
+        {{ form.is_active }}
+        <label>Actif</label>
+        {% if form.is_active.errors %}
+            <div class="text-red-600 text-sm mt-1">{{ form.is_active.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="flex space-x-4">
+        <button type="submit"
+                class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+            Enregistrer
+        </button>
+
+        <a href="{% url 'company_users_list' company.id %}"
+           class="bg-gray-300 px-4 py-2 rounded">
+            Annuler
+        </a>
+    </div>
+</form>
+
+{% endblock %}

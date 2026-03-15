@@ -1,5 +1,6 @@
 asgiref==3.11.1
 Django==6.0.2
+django-axes==8.3.1
 et_xmlfile==2.0.0
 numpy==2.4.2
 openpyxl==3.1.5

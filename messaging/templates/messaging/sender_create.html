@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-2xl font-bold mb-6">
+Créer un expéditeur
+</h2>
+
+<form method="POST" class="space-y-4">
+
+{% csrf_token %}
+
+<label class="block font-semibold">
+Nom de l'expéditeur
+</label>
+
+<input type="text"
+name="name"
+maxlength="11"
+required
+class="border rounded-lg p-3 w-full">
+
+<button class="bg-green-600 text-white px-6 py-3 rounded-lg">
+Créer
+</button>
+
+</form>
+
+{% endblock %}

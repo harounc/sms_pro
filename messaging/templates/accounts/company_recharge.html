@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-xl font-bold mb-4">
+    Recharge - {{ company.name }}
+</h2>
+
+<form method="post" class="bg-white p-6 rounded shadow max-w-md">
+    {% csrf_token %}
+
+    <div class="mb-4">
+        {{ form.amount.label_tag }}
+        {{ form.amount }}
+    </div>
+
+    <button type="submit"
+            class="bg-green-600 text-white px-4 py-2 rounded">
+        Recharger
+    </button>
+</form>
+
+{% endblock %}

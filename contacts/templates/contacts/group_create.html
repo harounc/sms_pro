@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Créer un groupe{% endblock %}
+
+{% block content %}
+
+<h2 class="text-3xl font-bold text-green-600 mb-6">
+Créer un groupe de contacts
+</h2>
+
+<form method="POST" class="space-y-6">
+{% csrf_token %}
+
+<div>
+<label class="block font-semibold mb-2">
+Nom du groupe <span class="text-red-500">*</span>
+</label>
+
+<input type="text"
+name="name"
+required
+class="w-full border rounded-lg p-3"
+placeholder="Ex: Clients VIP">
+
+</div>
+<!-- Submit button 
+<button type="submit"
+class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+
+Créer le groupe
+
+</button>
+-->
+
+
+
+
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="max-w-xl mx-auto bg-white shadow rounded-lg p-8 text-center">
+
+    <h2 class="text-2xl font-bold text-green-600 mb-6">
+        Utilisateur créé avec succès
+    </h2>
+
+    <div class="space-y-3 text-lg">
+
+        <p>
+            <strong>Username :</strong>
+            {{ created_user.username }}
+        </p>
+
+        <p>
+            <strong>Entreprise :</strong>
+            {{ company.name }}
+        </p>
+
+    </div>
+
+    <div class="mt-8 flex justify-center gap-4">
+
+        <a href="{% url 'company_users_list' company.id %}"
+           class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+            Voir les utilisateurs
+        </a>
+
+        <a href="{% url 'company_user_create' company.id %}"
+           class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">
+            Créer un autre utilisateur
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

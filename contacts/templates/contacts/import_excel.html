@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="text-xl font-bold mb-6">
+    Importer contact Excel
+</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+    {% csrf_token %}
+
+    <input type="file" name="file" class="border p-2">
+
+    <button class="bg-green-600 text-white px-4 py-2 rounded ml-4">
+        Importer
+    </button>
+
+</form>
+
+
+<!-- Résultats de l'importation -->
+{% if results %}
+    <div class="bg-white shadow rounded-lg p-6 mt-6">
+
+        <h3 class="text-lg font-semibold mb-4">
+            Resumé de l'import
+        </h3>
+
+        <p><strong>Lignes du fichier :</strong> {{ results.total_rows }}</p>
+        <p class="text-green-600"><strong>Contacts importés :</strong> {{ results.created }}</p>
+        <p class="text-green-600"><strong>Doublons:</strong> {{ results.duplicates|length }}</p>
+        <p class="text-red-600"><strong>Invalides:</strong> {{ results.invalid|length }}</p>
+    </div>
+{% endif %}
+
+
+<!-- Contenu du tableau importé -->
+
+{% if rows_data %}
+
+<div class="bg-white shadow rounded-lg p-6 mt-6">
+
+<h3 class="text-lg font-semibold mb-4">
+Contenu du fichier importÃ©
+</h3>
+
+<div class="overflow-x-auto">
+
+<table class="w-full border">
+
+<thead class="bg-gray-100">
+
+<tr>
+<th class="p-3">TÃ©lÃ©phone</th>
+<th class="p-3">Nom</th>
+<th class="p-3">Email</th>
+<th class="p-3">Statut</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for row in rows_data %}
+
+<tr class="border-t">
+
+<td class="p-2">{{ row.phone }}</td>
+<td class="p-2">{{ row.name }}</td>
+<td class="p-2">{{ row.email }}</td>
+
+<td class="p-2">
+
+{% if row.status == "imported" %}
+<span class="text-green-600 font-semibold">ImportÃ©</span>
+
+{% elif row.status == "duplicate" %}
+<span class="text-orange-600">Doublon</span>
+
+{% elif row.status == "invalid" %}
+<span class="text-red-600">Invalide</span>
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+
+{% endblock %}

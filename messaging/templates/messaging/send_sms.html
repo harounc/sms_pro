@@ -20,118 +20,269 @@
 {% endif %}
 
 <form method="POST" class="space-y-6">
-    {% csrf_token %}
+{% csrf_token %}
 
-    <div>
-        <label class="block font-semibold mb-2">
-            Numéros (séparés par ;)
-        </label>
-        <input type="text" name="phone" id="phoneInput"
-            placeholder="+2250700000001;+2250700000002"
-            class="w-full border rounded-lg p-3">
-        <p class="text-sm text-gray-500 mt-2">
-            Format obligatoire : +225 suivi de 10 chiffres
-        </p>
-    </div>
+<!-- Expéditeur -->
+<div>
+<label class="block font-semibold mb-2">
+Expéditeur <span class="text-red-500">*</span>
+</label>
 
-    <div>
-        <label class="block font-semibold mb-2">Nom (optionnel)</label>
-        <input type="text" name="name"
-            class="w-full border rounded-lg p-3">
-    </div>
+<select name="sender"
+class="w-full border rounded-lg p-3"
+required>
 
-    <div>
-        <label class="block font-semibold mb-2">Message</label>
-        <textarea name="message" id="messageInput"
-            class="w-full border rounded-lg p-3"></textarea>
-    </div>
+<option value="">Sélectionner un expéditeur</option>
 
-    <!-- Zone estimation -->
-    <div class="bg-gray-100 p-4 rounded-lg">
-        <p>Caractères : <span id="charCount">0</span></p>
-        <p>SMS par numéro : <span id="smsPerNumber">0</span></p>
-        <p>Nombre de numéros valides : <span id="validNumbers">0</span></p>
-        <p class="font-bold text-green-600">
-            Coût estimé : <span id="estimatedCost">0</span> crédits
-        </p>
-    </div>
+{% for sender in senders %}
+<option value="{{ sender.id }}">
+{{ sender.name }}
+</option>
+{% endfor %}
 
-    <!-- Zone programmation -->
-    <div>
-        <label class="block font-semibold mb-2">
-            Programmer l’envoi ?
-        </label>
-        <select id="scheduleOption" class="border p-2 rounded">
-            <option value="now">Envoyer maintenant</option>
-            <option value="later">Programmer</option>
-        </select>
-    </div>
+</select>
+</div>
 
-    <div id="scheduleFields" class="hidden space-y-3">
-        <input type="datetime-local" name="scheduled_at"
-            class="border p-2 rounded w-full">
-    </div>
+<!-- Groupe de contacts -->
+ 
+<!-- Destinataires -->
+<div>
+<label class="block font-semibold mb-2">
+Destinataires <span class="text-red-500">*</span> (numéros séparés par ;)
+</label>
 
-    <!-- Bouton d'envoi -->
-    <button type="submit"
-        class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg">
-        Envoyer
-    </button>
+<input type="text"
+name="phone"
+id="phoneInput"
+placeholder="+2250700000001;+2250700000002"
+class="w-full border rounded-lg p-3"
+required>
+
+<p class="text-sm text-gray-500 mt-2">
+Format obligatoire : +225 suivi de 10 chiffres
+</p>
+</div>
+
+<!-- Nom optionnel -->
+<div>
+<label class="block font-semibold mb-2">
+Nom (optionnel)
+</label>
+
+<input type="text"
+name="name"
+class="w-full border rounded-lg p-3">
+</div>
+
+<!-- Modèle de message -->
+<div>
+<label class="block font-semibold mb-2">
+Sélectionner un modèle de message
+</label>
+
+<select id="templateSelect"
+class="w-full border rounded-lg p-3">
+
+<option value="">Modèle</option>
+
+{% for template in templates %}
+<option value="{{ template.message }}">
+{{ template.name }}
+</option>
+{% endfor %}
+
+</select>
+</div>
+
+<!-- Message -->
+<div>
+<label class="block font-semibold mb-2">
+Message <span class="text-red-500">*</span>
+</label>
+
+<textarea name="message"
+id="messageInput"
+class="w-full border rounded-lg p-3"
+required></textarea>
+</div>
+
+<!-- Zone estimation -->
+<div class="bg-gray-100 p-4 rounded-lg">
+
+<p>Caractères : <span id="charCount">0</span></p>
+
+<p>SMS par numéro : <span id="smsPerNumber">0</span></p>
+
+<p>Nombre de numéros valides :
+<span id="validNumbers">0</span>
+</p>
+
+<p id="estimatedCostWrapper"
+class="font-bold text-green-600">
+
+Coût estimé :
+<span id="estimatedCost">0</span> fcfa
+
+</p>
+
+</div>
+
+<!-- Zone programmation -->
+<div id="scheduleFields" class="hidden space-y-3">
+
+<input type="datetime-local"
+name="scheduled_at"
+id="scheduledAt"
+class="border p-2 rounded w-full">
+
+</div>
+
+<!-- Bouton -->
+<div class="relative inline-block">
+
+<button type="button"
+id="sendButton"
+class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+
+<span id="sendButtonLabel">
+Envoyer maintenant
+</span>
+
+<span class="ml-2">▾</span>
+
+</button>
+
+<div id="sendMenu"
+class="hidden absolute left-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-10">
+
+<button type="button"
+id="sendNowOption"
+class="w-full text-left px-4 py-2 hover:bg-gray-100">
+
+Envoyer maintenant
+
+</button>
+
+<button type="button"
+id="scheduleOption"
+class="w-full text-left px-4 py-2 hover:bg-gray-100">
+
+Programmer
+
+</button>
+
+</div>
+
+</div>
+
+<span id="availableBalance"
+class="hidden"
+data-balance="{% if request.user.role == 'user' %}{{ request.user.credit_balance|default:0 }}{% elif request.user.company %}{{ request.user.company.balance|default:0 }}{% else %}0{% endif %}"></span>
+
 </form>
 
-<!-- Script pour l'estimation -->
+<!-- Script estimation -->
 <script>
-const SMS_PRICE = 19;
 
-const messageInput = document.getElementById("messageInput");
-const phoneInput = document.getElementById("phoneInput");
+const SMS_PRICE = 19
 
-const charCount = document.getElementById("charCount");
-const smsPerNumber = document.getElementById("smsPerNumber");
-const validNumbers = document.getElementById("validNumbers");
-const estimatedCost = document.getElementById("estimatedCost");
+const AVAILABLE_BALANCE = Number(
+document.getElementById("availableBalance").dataset.balance || 0
+)
 
-function calculate() {
+const messageInput = document.getElementById("messageInput")
+const phoneInput = document.getElementById("phoneInput")
 
-    const messageLength = messageInput.value.length;
-    charCount.innerText = messageLength;
+const charCount = document.getElementById("charCount")
+const smsPerNumber = document.getElementById("smsPerNumber")
+const validNumbers = document.getElementById("validNumbers")
+const estimatedCost = document.getElementById("estimatedCost")
+const estimatedCostWrapper = document.getElementById("estimatedCostWrapper")
+const sendButton = document.getElementById("sendButton")
 
-    const smsParts = Math.ceil(messageLength / 160) || 0;
-    smsPerNumber.innerText = smsParts;
+const formEl = sendButton.closest('form')
 
-    const numbers = phoneInput.value.split(";");
-    let validCount = 0;
+function calculate(){
 
-    numbers.forEach(num => {
-        const trimmed = num.trim();
-        const regex = /^\+225\d{10}$/;
-        if (regex.test(trimmed)) {
-            validCount++;
-        }
-    });
+const messageLength = messageInput.value.length
+charCount.innerText = messageLength
 
-    validNumbers.innerText = validCount;
+const smsParts = Math.ceil(messageLength / 160) || 0
+smsPerNumber.innerText = smsParts
 
-    const totalCost = validCount * smsParts * SMS_PRICE;
-    estimatedCost.innerText = totalCost.toFixed(2);
+const numbers = phoneInput.value.split(";")
+
+let validCount = 0
+
+numbers.forEach(num => {
+
+const trimmed = num.trim()
+
+const regex = /^\+225\d{10}$/
+
+if(regex.test(trimmed)){
+validCount++
 }
 
-messageInput.addEventListener("input", calculate);
-phoneInput.addEventListener("input", calculate);
+})
+
+validNumbers.innerText = validCount
+
+const totalCost = validCount * smsParts * SMS_PRICE
+
+estimatedCost.innerText = totalCost.toFixed(2)
+
+const exceeds = totalCost > Number(AVAILABLE_BALANCE)
+
+if(exceeds){
+
+estimatedCostWrapper.classList.remove('text-green-600')
+estimatedCostWrapper.classList.add('text-red-600')
+
+sendButton.disabled = true
+
+sendButton.classList.add('opacity-50','cursor-not-allowed')
+
+sendButton.classList.remove('hover:bg-green-700')
+
+}else{
+
+estimatedCostWrapper.classList.remove('text-red-600')
+estimatedCostWrapper.classList.add('text-green-600')
+
+sendButton.disabled = false
+
+sendButton.classList.remove('opacity-50','cursor-not-allowed')
+
+sendButton.classList.add('hover:bg-green-700')
+
+}
+
+}
+
+messageInput.addEventListener("input", calculate)
+phoneInput.addEventListener("input", calculate)
+
+calculate()
+
 </script>
 
-<!-- Script pour la programmation -->
+<!-- Script modèle message -->
 <script>
-const option = document.getElementById("scheduleOption");
-const fields = document.getElementById("scheduleFields");
 
-option.addEventListener("change", function() {
-    if (this.value === "later") {
-        fields.classList.remove("hidden");
-    } else {
-        fields.classList.add("hidden");
-    }
-});
+const templateSelect = document.getElementById("templateSelect")
+
+templateSelect.addEventListener("change", function(){
+
+const message = this.value
+
+if(message){
+messageInput.value = message
+calculate()
+}
+
+})
+
 </script>
 
 {% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Groupes de contacts{% endblock %}
+
+{% block content %}
+
+<h2 class="text-3xl font-bold text-green-600 mb-6">
+Groupes de contacts
+</h2>
+
+<div class="flex justify-between items-center mb-6">
+
+<p class="text-gray-500">
+Créez des groupes pour organiser vos contacts
+</p>
+
+<a href="{% url 'contact_group_create' %}"
+class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+
++ Ajouter
+
+</a>
+
+</div>
+
+
+<div class="bg-white shadow rounded-lg overflow-hidden">
+
+<table class="w-full">
+
+<thead class="bg-gray-100">
+
+<tr>
+
+<th class="p-3 text-left">#</th>
+<th class="p-3 text-left">Ajouté le</th>
+<th class="p-3 text-left">Nom du groupe</th>
+<th class="p-3 text-left">Nombre de contacts</th>
+<th class="p-3 text-left">Action</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for group in groups %}
+
+<tr class="border-t">
+
+<td class="p-3">
+{{ forloop.counter }}
+</td>
+
+<td class="p-3">
+{{ group.created_at|date:"Y-m-d H:i" }}
+</td>
+
+<td class="p-3 font-semibold">
+{{ group.name }}
+</td>
+
+<td class="p-3">
+{{ group.contacts.count }}
+</td>
+
+<td class="p-3 flex gap-3">
+
+<a href="{% url 'contact_group_detail' group.id %}"
+class="text-blue-600 hover:underline">
+Voir
+</a>
+
+<a href="{% url 'contact_group_edit' group.id %}"
+class="text-yellow-600 hover:underline">
+Modifier
+</a>
+
+<a href="{% url 'contact_group_delete' group.id %}"
+class="text-red-600 hover:underline">
+Supprimer
+</a>
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="5" class="p-4 text-center text-gray-500">
+Aucun groupe créé
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

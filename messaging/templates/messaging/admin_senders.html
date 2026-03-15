@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<table class="w-full border">
+
+<thead>
+<tr>
+<th>Sender</th>
+<th>Entreprise</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for sender in senders %}
+
+<tr>
+
+<td>{{ sender.name }}</td>
+
+<td>{{ sender.company.name }}</td>
+
+<td>{{ sender.status }}</td>
+
+<td>
+
+{% if sender.status == "pending" and not request.user.company %}
+
+<a href="{% url 'approve_sender' sender.id %}" class="text-green-600">
+Approuver
+</a>
+
+<a href="{% url 'reject_sender' sender.id %}" class="text-red-600 ml-3">
+Refuser
+</a>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+{% endblock %}

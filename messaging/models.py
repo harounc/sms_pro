@@ -1,6 +1,8 @@
 from django.db import models
+from django.contrib.auth import get_user_model
 from accounts.models import User, Company
 from .managers import CompanyManager
+
 
 
 # ==============================
@@ -132,3 +134,50 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.phone} - {self.status}"
+
+# ===========================
+# EXPEDITEUR _ Sender
+# ===========================
+
+User = get_user_model()
+
+class Sender(models.Model):
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+    )
+
+    name = models.CharField(max_length=15, unique=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'En attente'),
+            ('approved', 'Approuvé'),
+            ('rejected', 'Refusé'),
+        ],
+        default='pending'
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_senders"
+    )
+
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_senders"
+    )
+
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name

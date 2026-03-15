@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-2xl font-bold mb-6">Dashboard Plateforme</h2>
+
+<div class="grid grid-cols-4 gap-6">
+
+    <div class="bg-white p-4 rounded shadow">
+        <h3>Entreprises</h3>
+        <p class="text-2xl font-bold">{{ total_companies }}</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow">
+        <h3>Entreprises actives</h3>
+        <p class="text-2xl font-bold">{{ active_companies }}</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow">
+        <h3>SMS envoyés</h3>
+        <p class="text-2xl font-bold">{{ total_sms }}</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow">
+        <h3>Revenus</h3>
+        <p class="text-2xl font-bold">{{ total_revenue }}</p>
+    </div>
+
+</div>
+
+<div class="grid grid-cols-3 gap-6 mt-6">
+
+    <div class="bg-white p-4 rounded shadow border-l-4 border-blue-500">
+        <h3 class="text-sm text-gray-600">SMS aujourd'hui</h3>
+        <p class="text-2xl font-bold text-blue-600">{{ sms_today }}</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow border-l-4 border-green-500">
+        <h3 class="text-sm text-gray-600">Utilisateurs actifs</h3>
+        <p class="text-2xl font-bold text-green-600">{{ active_users }}</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow border-l-4 border-purple-500">
+        <h3 class="text-sm text-gray-600">Solde total</h3>
+        <p class="text-2xl font-bold text-purple-600">{{ total_balance }}</p>
+    </div>
+
+</div>
+
+<div class="mt-8 bg-white rounded shadow">
+    <div class="p-4 border-b">
+        <h3 class="font-semibold">Top 5 entreprises</h3>
+    </div>
+
+    <div class="p-4">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="text-gray-600">
+                    <th class="py-2">Entreprise</th>
+                    <th class="py-2">SMS envoyés</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for company in top_companies %}
+                <tr class="border-t">
+                    <td class="py-2">{{ company.name }}</td>
+                    <td class="py-2">{{ company.sms_count }}</td>
+                </tr>
+                {% empty %}
+                <tr class="border-t">
+                    <td class="py-3" colspan="2">Aucune donnée</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-8 bg-white rounded shadow">
+    <div class="p-4 border-b">
+        <h3 class="font-semibold">Top 5 utilisateurs</h3>
+    </div>
+
+    <div class="p-4">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="text-gray-600">
+                    <th class="py-2">Utilisateur</th>
+                    <th class="py-2">Entreprise</th>
+                    <th class="py-2">SMS envoyés</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in top_users %}
+                <tr class="border-t">
+                    <td class="py-2">{{ user.get_full_name|default:user.username }}</td>
+                    <td class="py-2">{{ user.company.name|default:"-" }}</td>
+                    <td class="py-2">{{ user.sms_count }}</td>
+                </tr>
+                {% empty %}
+                <tr class="border-t">
+                    <td class="py-3" colspan="3">Aucune donnée</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-8 bg-white rounded shadow">
+    <div class="p-4 border-b">
+        <h3 class="font-semibold">Historique des rechargements</h3>
+    </div>
+
+    <div class="p-4">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="text-gray-600">
+                    <th class="py-2">Date</th>
+                    <th class="py-2">Entreprise</th>
+                    <th class="py-2">Montant</th>
+                    <th class="py-2">Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recharge in recent_recharges %}
+                <tr class="border-t">
+                    <td class="py-2">{{ recharge.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="py-2">{{ recharge.company.name }}</td>
+                    <td class="py-2 text-green-600 font-semibold">+{{ recharge.amount }}</td>
+                    <td class="py-2">
+                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Crédit</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr class="border-t">
+                    <td class="py-3" colspan="4">Aucun rechargement récent</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-8 bg-white p-6 rounded-lg shadow">
+    <h3 class="text-xl font-bold mb-4">
+        SMS envoyés (7 derniers jours)
+    </h3>
+    <canvas id="platformChart"></canvas>
+</div>
+
+<div class="mt-8 bg-white p-6 rounded-lg shadow">
+    <h3 class="text-xl font-bold mb-4">
+        Taux de consommation par entreprise (Top 10)
+    </h3>
+    <canvas id="consumptionChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Données injectées depuis le template
+const dailyData = JSON.parse('{{ daily_data|safe }}');
+const companiesConsumption = JSON.parse('{{ companies_consumption|safe }}');
+
+// Graphique SMS envoyés (7 derniers jours)
+const labels = dailyData.map(item => item.date);
+const data = dailyData.map(item => item.count);
+
+const ctx = document.getElementById('platformChart').getContext('2d');
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'SMS envoyés',
+            data: data,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+            tension: 0.3,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+
+// Graphique taux de consommation par entreprise
+const consumptionCtx = document.getElementById('consumptionChart').getContext('2d');
+const consumptionLabels = companiesConsumption.map(item => item.name);
+const consumptionRates = companiesConsumption.map(item => item.rate);
+const spentAmounts = companiesConsumption.map(item => item.spent);
+
+new Chart(consumptionCtx, {
+    type: 'bar',
+    data: {
+        labels: consumptionLabels,
+        datasets: [
+            {
+                label: 'Taux de consommation (%)',
+                data: consumptionRates,
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                borderColor: '#ef4444',
+                borderWidth: 1,
+                yAxisID: 'y'
+            },
+            {
+                label: 'Montant dépensé',
+                data: spentAmounts,
+                backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                borderColor: '#22c55e',
+                borderWidth: 1,
+                yAxisID: 'y1'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Taux de consommation (%)'
+                },
+                max: 100
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Montant dépensé'
+                },
+                grid: {
+                    drawOnChartArea: false,
+                },
+            },
+        }
+    }
+});
+</script>
+
+{% endblock %}

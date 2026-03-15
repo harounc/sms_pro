@@ -28,6 +28,19 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1 # 1 heure
+AXES_LOCKOUT_TEMPLATE = 'accounts/lockout.html'
+AXES_RESET_ON_SUCCESS = True
+
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -40,6 +53,8 @@ INSTALLED_APPS = [
     'accounts',
     'core',
     'messaging',
+    'axes',
+    'contacts',
 ]
 
 
@@ -55,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.CompanyActiveMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'sms_platform.urls'
@@ -69,6 +85,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.sidebar_sms_counter',
             ],
         },
     },
@@ -124,8 +141,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+
 LOGIN_URL = 'login' # CH : Page de connexion
-LOGIN_REDIRECT_URL = 'dashboard' # CH : Redirection après connexion
+#LOGIN_REDIRECT_URL = 'dashboard' # CH : Redirection après connexion
+LOGIN_REDIRECT_URL = 'redirect_after_login' # CH : Redirection après connexion
 LOGOUT_REDIRECT_URL = 'login'   # CH : Redirection après déconnexion
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # CH : Backend pour l'envoi d'emails

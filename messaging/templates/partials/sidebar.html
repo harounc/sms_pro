@@ -1,41 +1,273 @@
 <aside class="w-64 bg-white min-h-screen shadow">
 
-    <div class="p-6 font-bold text-gray-700 border-b">
-        Menu
-    </div>
+<ul class="p-4 space-y-3">
 
-    <ul class="p-4 space-y-3">
 
-        <li>
-            <a href="{% url 'dashboard' %}"
-               class="block px-4 py-2 rounded hover:bg-green-100">
-                Dashboard
-            </a>
-        </li>
+{% if request.user.role == "admin" and request.user.company is None %}
 
-        <li>
-            <a href="{% url 'send_sms' %}"
-               class="block px-4 py-2 rounded hover:bg-orange-100">
-                SMS Simple
-            </a>
-        </li>
+<!-- ADMIN PLATEFORME -->
 
-        <li>
-            <a href="{% url 'campaign_upload' %}"
-               class="block px-4 py-2 rounded hover:bg-blue-100">
-                Campagne
-            </a>
-        </li>
+<li>
+<a href="{% url 'accounts_dashboard' %}"
+class="flex items-center gap-3 px-4 py-2 rounded hover:bg-blue-100">
 
-        {% if request.user.role == "admin" %}
-        <li>
-            <a href="{% url 'admin_dashboard' %}"
-               class="block px-4 py-2 rounded hover:bg-purple-100">
-                Admin Global
-            </a>
-        </li>
-        {% endif %}
+<i data-lucide="layout-dashboard" class="w-5 h-5"></i>
 
-    </ul>
+Dashboard
+</a>
+</li>
+
+<li>
+<a href="{% url 'company_list' %}"
+class="flex items-center gap-3 px-4 py-2 rounded hover:bg-green-100">
+
+<i data-lucide="building-2" class="w-5 h-5"></i>
+
+Entreprises
+</a>
+</li>
+
+
+<!-- EXPEDITEURS -->
+<li>
+<a href="{% url 'senders_list' %}"
+class="flex items-center gap-3 px-4 py-2 rounded hover:bg-orange-100">
+
+<i data-lucide="badge-check" class="w-5 h-5"></i>
+
+Expéditeurs
+</a>
+</li>
+
+
+<!-- HISTORIQUE -->
+<li>
+
+<details class="group">
+
+<summary class="flex items-center gap-3 cursor-pointer px-4 py-2 rounded hover:bg-gray-100 font-semibold">
+
+<i data-lucide="history" class="w-5 h-5"></i>
+
+Historique
+
+</summary>
+
+<ul class="ml-4 mt-2 space-y-2">
+
+<li>
+<a href="{% url 'message_history' %}"
+class="flex items-center gap-2 px-3 py-1 text-sm rounded hover:bg-blue-50">
+
+<i data-lucide="mail" class="w-4 h-4"></i>
+
+Messages
+</a>
+</li>
+
+<li>
+<a href="{% url 'message_history' %}?export=csv"
+class="flex items-center gap-2 px-3 py-1 text-sm rounded hover:bg-green-50 text-green-600">
+
+<i data-lucide="download" class="w-4 h-4"></i>
+
+Exporter CSV
+</a>
+</li>
+
+</ul>
+
+</details>
+
+</li>
+
+
+
+{% else %}
+
+
+<!-- DASHBOARD -->
+
+<li>
+
+<a href="{% url 'dashboard' %}"
+class="flex items-center gap-3 px-4 py-2 rounded hover:bg-green-100">
+
+<i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+
+Dashboard
+
+</a>
+
+</li>
+
+
+
+<!-- UTILISATEURS ENTREPRISE -->
+
+{% if request.user.role == "admin" and request.user.company %}
+
+<li>
+
+<a href="{% url 'company_users_list' request.user.company.id %}"
+class="flex items-center gap-3 px-4 py-2 rounded hover:bg-green-100">
+
+<i data-lucide="users" class="w-5 h-5"></i>
+
+Utilisateurs
+
+</a>
+
+</li>
+
+{% endif %}
+
+
+
+<!-- CONTACTS -->
+
+<li>
+
+<a href="{% url 'contact_groups_list' %}"
+class="flex items-center gap-3 px-4 py-2 rounded hover:bg-gray-100">
+
+<i data-lucide="folder" class="w-5 h-5"></i>
+
+Contacts
+
+</a>
+
+</li>
+
+
+
+<!-- EXPEDITEURS (admin uniquement) -->
+
+{% if request.user.role == "admin" %}
+
+<li>
+
+<a href="{% url 'senders_list' %}"
+class="flex items-center gap-3 px-4 py-2 rounded hover:bg-orange-100">
+
+<i data-lucide="badge-check" class="w-5 h-5"></i>
+
+Expéditeurs
+
+</a>
+
+</li>
+
+{% endif %}
+
+
+
+<!-- ENVOI -->
+
+<li>
+
+<details class="group">
+
+<summary class="flex items-center gap-3 cursor-pointer px-4 py-2 rounded hover:bg-gray-100 font-semibold">
+
+<i data-lucide="send" class="w-5 h-5"></i>
+
+Envoi
+
+</summary>
+
+
+<ul class="ml-4 mt-2 space-y-2">
+
+
+<li>
+
+<a href="{% url 'send_sms' %}"
+class="flex items-center gap-2 px-3 py-1 text-sm rounded hover:bg-orange-50">
+
+<i data-lucide="message-square" class="w-4 h-4"></i>
+
+SMS Simple
+
+</a>
+
+</li>
+
+
+<li>
+
+<a href="{% url 'campaign_upload' %}"
+class="flex items-center gap-2 px-3 py-1 text-sm rounded hover:bg-blue-50">
+
+<i data-lucide="megaphone" class="w-4 h-4"></i>
+
+Campagnes
+
+</a>
+
+</li>
+
+</ul>
+
+</details>
+
+</li>
+
+
+
+<!-- HISTORIQUE -->
+
+<li>
+
+<details class="group">
+
+<summary class="flex items-center gap-3 cursor-pointer px-4 py-2 rounded hover:bg-gray-100 font-semibold">
+
+<i data-lucide="history" class="w-5 h-5"></i>
+
+Historique
+
+</summary>
+
+
+<ul class="ml-4 mt-2 space-y-2">
+
+<li>
+
+<a href="{% url 'message_history' %}"
+class="flex items-center gap-2 px-3 py-1 text-sm rounded hover:bg-blue-50">
+
+<i data-lucide="mail" class="w-4 h-4"></i>
+
+Messages
+
+</a>
+
+</li>
+
+
+<li>
+
+<a href="{% url 'message_history' %}?export=csv"
+class="flex items-center gap-2 px-3 py-1 text-sm rounded hover:bg-green-50 text-green-600">
+
+<i data-lucide="download" class="w-4 h-4"></i>
+
+Exporter CSV
+
+</a>
+
+</li>
+
+</ul>
+
+</details>
+
+</li>
+
+
+{% endif %}
+
+</ul>
 
 </aside>

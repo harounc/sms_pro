@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-xl font-bold mb-4">
+    Recharge utilisateur - {{ target_user.username }} ({{ company.name }})
+</h2>
+
+<div class="mb-4 text-gray-700">
+    <div>Solde entreprise : <strong>{{ company.balance }}</strong> crédits</div>
+    <div>Crédit utilisateur : <strong>{{ target_user.credit_balance }}</strong> crédits</div>
+</div>
+
+<form method="post" class="bg-white p-6 rounded shadow max-w-md">
+    {% csrf_token %}
+
+    <div class="mb-4">
+        {{ form.amount.label_tag }}
+        {{ form.amount }}
+    </div>
+
+    <button type="submit"
+            class="bg-green-600 text-white px-4 py-2 rounded">
+        Alimenter
+    </button>
+</form>
+
+{% endblock %}
