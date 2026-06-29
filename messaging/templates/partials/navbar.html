@@ -30,6 +30,7 @@
 
 
         <!-- Solde -->
+        <!--
         <div class="text-gray-600">
 
             Solde :
@@ -49,6 +50,27 @@
             </span>
 
         </div>
+        -->
+
+        {% if not request.user.is_super_admin %}
+
+        <div class="text-gray-600">
+            Solde :
+
+            <span class="font-bold text-green-600">
+
+                {% if request.user.is_user %}
+                    {{ request.user.credit_balance }} FCFA
+
+                {% elif request.user.is_admin %}
+                    {{ request.user.company.balance }} FCFA
+
+                {% endif %}
+
+            </span>
+        </div>
+
+        {% endif %}
 
 
         <!-- Menu utilisateur -->
@@ -96,33 +118,6 @@
                    class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
                    Mon Profil
                 </a>
-
-
-                <!-- Changer mot de passe 
-                <a href="#"
-                   class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
-                   Changer mot de passe
-                </a>
-                -->
-
-
-                <!-- Paramètres entreprise 
-                {% if request.user.role == "admin" and request.user.company %}
-                <a href="#"
-                   class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
-                   Paramètres entreprise
-                </a>
-                {% endif %}
-                -->
-
-
-                <!-- Support 
-                <a href="#"
-                   class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
-                   Support
-                </a>
-                -->
-
 
                 <!-- Divider -->
                 <div class="border-t"></div>

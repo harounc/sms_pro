@@ -23,23 +23,19 @@ class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
 
 </div>
 
-
 <div class="bg-white shadow rounded-lg overflow-hidden">
 
 <table class="w-full">
 
 <thead class="bg-gray-100">
-
 <tr>
-
 <th class="p-3 text-left">#</th>
 <th class="p-3 text-left">Ajouté le</th>
+<th class="p-3 text-left">Ajouté par</th>
 <th class="p-3 text-left">Nom du groupe</th>
 <th class="p-3 text-left">Nombre de contacts</th>
 <th class="p-3 text-left">Action</th>
-
 </tr>
-
 </thead>
 
 <tbody>
@@ -54,6 +50,10 @@ class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
 
 <td class="p-3">
 {{ group.created_at|date:"Y-m-d H:i" }}
+</td>
+
+<td class="p-3">
+{{ group.owner.username|default:"System" }}
 </td>
 
 <td class="p-3 font-semibold">
@@ -76,10 +76,14 @@ class="text-yellow-600 hover:underline">
 Modifier
 </a>
 
-<a href="{% url 'contact_group_delete' group.id %}"
-class="text-red-600 hover:underline">
+<form method="POST"
+      action="{% url 'contact_group_delete' group.id %}"
+      onsubmit="return confirm('Supprimer ce groupe et tous ses contacts ?');">
+{% csrf_token %}
+<button type="submit" class="text-red-600 hover:underline">
 Supprimer
-</a>
+</button>
+</form>
 
 </td>
 
@@ -88,11 +92,9 @@ Supprimer
 {% empty %}
 
 <tr>
-
-<td colspan="5" class="p-4 text-center text-gray-500">
+<td colspan="6" class="p-4 text-center text-gray-500">
 Aucun groupe créé
 </td>
-
 </tr>
 
 {% endfor %}

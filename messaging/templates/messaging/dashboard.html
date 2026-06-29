@@ -7,168 +7,138 @@
     Dashboard
 </h2>
 
-<!-- Filtres -->
-<div class="mb-6 space-x-4">
+<!-- ================= FILTRES ================= -->
+<div class="mb-6 flex gap-3 flex-wrap">
 
-    <a href="?period=1"
-       class="px-4 py-2 rounded {% if period == '1' %}bg-green-600 text-white{% else %}bg-gray-200{% endif %}">
-        Aujourd’hui
+    {% for f in filters %}
+    <a href="?period={{ f.value }}"
+       class="px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm
+       {% if period == f.value %}
+           bg-green-600 text-white
+       {% else %}
+           bg-gray-100 hover:bg-gray-200 text-gray-700
+       {% endif %}">
+        {{ f.label }}
     </a>
-
-    <a href="?period=7"
-       class="px-4 py-2 rounded {% if period == '7' %}bg-green-600 text-white{% else %}bg-gray-200{% endif %}">
-        7 jours
-    </a>
-
-    <a href="?period=30"
-       class="px-4 py-2 rounded {% if period == '30' %}bg-green-600 text-white{% else %}bg-gray-200{% endif %}">
-        30 jours
-    </a>
+    {% endfor %}
 
 </div>
 
-<!-- KPI -->
-<div class="grid grid-cols-5 gap-6 mb-10">
+<!-- ================= KPI ================= -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
 
-    <div class="bg-white shadow rounded-lg p-6 text-center">
-        <p class="text-gray-500">Solde</p>
-        <p class="text-2xl font-bold text-green-600">
-            {{ balance }} FCFA
+    <div class="bg-white shadow rounded-xl p-6 text-center border-t-4 border-green-500">
+        <p class="text-gray-500 text-sm">Solde</p>
+        <p class="text-2xl font-bold text-green-600 mt-2">
+            {{ balance|default:0 }} FCFA
         </p>
     </div>
 
-    <div class="bg-white shadow rounded-lg p-6 text-center">
-        <p class="text-gray-500">Total SMS</p>
-        <p class="text-2xl font-bold text-orange-500">
-            {{ total_sms }}
+    <div class="bg-white shadow rounded-xl p-6 text-center border-t-4 border-orange-500">
+        <p class="text-gray-500 text-sm">Total SMS</p>
+        <p class="text-2xl font-bold text-orange-500 mt-2">
+            {{ total_sms|default:0 }}
         </p>
     </div>
 
-    <div class="bg-white shadow rounded-lg p-6 text-center">
-        <p class="text-gray-500">SMS aujourd’hui</p>
-        <p class="text-2xl font-bold text-blue-600">
-            {{ sms_today }}
+    <div class="bg-white shadow rounded-xl p-6 text-center border-t-4 border-blue-500">
+        <p class="text-gray-500 text-sm">SMS aujourd’hui</p>
+        <p class="text-2xl font-bold text-blue-600 mt-2">
+            {{ sms_today|default:0 }}
         </p>
     </div>
 
-    <div class="bg-white shadow rounded-lg p-6 text-center">
-        <p class="text-gray-500">SMS planifiés</p>
-        <p class="text-2xl font-bold text-purple-600">
-            {{ scheduled_sms }}
+    <div class="bg-white shadow rounded-xl p-6 text-center border-t-4 border-purple-500">
+        <p class="text-gray-500 text-sm">SMS planifiés</p>
+        <p class="text-2xl font-bold text-purple-600 mt-2">
+            {{ scheduled_sms|default:0 }}
         </p>
     </div>
 
-    <div class="bg-white shadow rounded-lg p-6 text-center">
-        <p class="text-gray-500">Total dépensé</p>
-        <p class="text-2xl font-bold text-red-600">
-            {{ total_spent|floatformat:2 }}
+    <div class="bg-white shadow rounded-xl p-6 text-center border-t-4 border-red-500">
+        <p class="text-gray-500 text-sm">Total dépensé</p>
+        <p class="text-2xl font-bold text-red-600 mt-2">
+            {{ total_spent|floatformat:2 }} FCFA
         </p>
     </div>
 
 </div>
 
-<!-- Historique -->
-<div class="grid grid-cols-4 gap-6 mb-10">
+<!-- ================= HISTORIQUE JOUR ================= -->
+<div class="bg-white shadow rounded-xl p-6 mb-10">
 
-    <!-- SMS simples -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-lg font-bold mb-4">Derniers SMS simples</h3>
+    <h3 class="text-xl font-bold mb-4 text-green-600">
+        📊 Historique du jour
+    </h3>
 
-        {% for m in recent_simple %}
-        <div class="text-sm flex justify-between mb-2">
-            <span>{{ m.phone }}</span>
-            <span class="text-gray-500">{{ m.sent_at|date:"d/m H:i" }}</span>
-        </div>
-        {% empty %}
-        <p class="text-gray-500 text-sm">Aucun SMS.</p>
-        {% endfor %}
-    </div>
+    {% if today_history %}
+    <table class="w-full text-sm">
 
-    <!-- Campagnes -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-lg font-bold mb-4">Dernières campagnes</h3>
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="p-2 text-left">Numéro</th>
+                <th class="p-2 text-left">Titre</th>
+                <th class="p-2 text-left">Message</th>
+                <th class="p-2 text-left">Heure</th>
+            </tr>
+        </thead>
 
-        {% for m in recent_campaign %}
-        <div class="text-sm flex justify-between mb-2">
-            <span>{{ m.phone }}</span>
-            <span class="text-gray-500">{{ m.sent_at|date:"d/m H:i" }}</span>
-        </div>
-        {% empty %}
-        <p class="text-gray-500 text-sm">Aucune campagne.</p>
-        {% endfor %}
-    </div>
+        <tbody>
+            {% for sms in today_history %}
+            <tr class="border-t">
+                <td class="p-2">{{ sms.phone }}</td>
+                <td class="p-2">{{ sms.title }}</td>
+                <td class="p-2 truncate">{{ sms.message|truncatechars:40 }}</td>
+                <td class="p-2 text-gray-500">
+                    {{ sms.sent_at|date:"H:i" }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
 
-    <!-- SMS simples planifiés -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-lg font-bold mb-4">SMS simples planifiés</h3>
-
-        {% for m in pending_simple %}
-        <div class="text-sm flex justify-between mb-2">
-            <span>{{ m.phone }}</span>
-            <span class="text-gray-500">{{ m.scheduled_at|date:"d/m H:i" }}</span>
-        </div>
-        {% empty %}
-        <p class="text-gray-500 text-sm">Aucun SMS planifié.</p>
-        {% endfor %}
-    </div>
-
-    <!-- Campagnes planifiées -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-lg font-bold mb-4">Campagnes planifiées</h3>
-
-        {% for m in pending_campaigns %}
-        <div class="text-sm flex justify-between mb-2">
-            <span>{{ m.phone }}</span>
-            <span class="text-gray-500">{{ m.scheduled_at|date:"d/m H:i" }}</span>
-        </div>
-        {% empty %}
-        <p class="text-gray-500 text-sm">Aucune campagne planifiée.</p>
-        {% endfor %}
-    </div>
+    </table>
+    {% else %}
+        <p class="text-gray-400 text-center">Aucun SMS aujourd’hui</p>
+    {% endif %}
 
 </div>
 
-<!-- Graphique -->
-<div class="bg-white p-6 rounded-lg shadow">
-    <h3 class="text-xl font-bold mb-4">
-        SMS envoyés
+<!-- ================= GRAPH ================= -->
+<div class="bg-white p-6 rounded-xl shadow">
+
+    <h3 class="text-xl font-bold mb-4 text-gray-700">
+        📈 SMS envoyés
     </h3>
 
     <canvas id="smsChart" height="100"></canvas>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 
-const dailyData = JSON.parse('{{ daily_data|safe }}')
+const dailyData = JSON.parse('{{ daily_data|escapejs }}');
 
-const labels = dailyData.map(x => x.date)
-const data = dailyData.map(x => x.count)
+if (dailyData.length > 0) {
 
-const ctx = document.getElementById('smsChart')
-
-new Chart(ctx, {
-
-    type: 'bar',
-
-    data: {
-        labels: labels,
-        datasets: [{
-            label: 'SMS envoyés',
-            data: data,
-            backgroundColor: '#16a34a'
-        }]
-    },
-
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false }
+    new Chart(document.getElementById('smsChart'), {
+        type: 'line',
+        data: {
+            labels: dailyData.map(x => x.date),
+            datasets: [{
+                data: dailyData.map(x => x.count),
+                borderColor: '#16a34a',
+                backgroundColor: 'rgba(22,163,74,0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } }
         }
-    }
-
-})
+    });
+}
 
 </script>
 

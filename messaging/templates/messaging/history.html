@@ -7,213 +7,84 @@
     Historique des envois
 </h2>
 
+<!-- ================= SEARCH LIVE ================= -->
+<input id="searchInput"
+       placeholder="🔎 Rechercher téléphone ou message..."
+       class="border p-3 rounded w-full mb-6 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+
+<!-- ================= FILTRES ================= -->
 <form method="GET" class="bg-white shadow rounded-lg p-6 mb-6">
 
-    <div class="grid grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 
-        <div>
-            <label class="block text-sm font-semibold mb-2">Type</label>
-            <select name="type" class="w-full border rounded-lg p-2">
-                <option value="" {% if not type %}selected{% endif %}>Tous</option>
-                <option value="simple" {% if type == 'simple' %}selected{% endif %}>Simple</option>
-                <option value="campaign" {% if type == 'campaign' %}selected{% endif %}>Campagne</option>
-            </select>
-        </div>
+        <select name="type" class="border p-2 rounded">
+            <option value="">Type</option>
+            <option value="simple">Simple</option>
+            <option value="campaign">Campagne</option>
+        </select>
 
-        <div>
-            <label class="block text-sm font-semibold mb-2">Statut</label>
-            <select name="status" class="w-full border rounded-lg p-2">
-                <option value="" {% if not status %}selected{% endif %}>Tous</option>
-                <option value="scheduled" {% if status == 'scheduled' %}selected{% endif %}>Planifié</option>
-                <option value="sent" {% if status == 'sent' %}selected{% endif %}>Envoyé</option>
-                <option value="failed" {% if status == 'failed' %}selected{% endif %}>Échec</option>
-                <option value="pending" {% if status == 'pending' %}selected{% endif %}>En attente</option>
-            </select>
-        </div>
+        <select name="status" class="border p-2 rounded">
+            <option value="">Statut</option>
+            <option value="sent">Envoyé</option>
+            <option value="scheduled">Planifié</option>
+            <option value="failed">Échec</option>
+        </select>
 
-        <div>
-            <label class="block text-sm font-semibold mb-2">Téléphone</label>
-            <input type="text"
-                   name="phone"
-                   value="{{ phone }}"
-                   class="w-full border rounded-lg p-2"
-                   placeholder="+225...">
-        </div>
+        <input type="text" name="phone" placeholder="Téléphone"
+               class="border p-2 rounded">
 
-        <div>
-            <label class="block text-sm font-semibold mb-2">Début</label>
-            <input type="date"
-                   name="start"
-                   value="{{ start }}"
-                   class="w-full border rounded-lg p-2">
-        </div>
-
-        <div>
-            <label class="block text-sm font-semibold mb-2">Fin</label>
-            <input type="date"
-                   name="end"
-                   value="{{ end }}"
-                   class="w-full border rounded-lg p-2">
-        </div>
+        <input type="date" name="start" class="border p-2 rounded">
+        <input type="date" name="end" class="border p-2 rounded">
 
     </div>
 
-    <div class="flex items-center gap-3 mt-5">
+    <div class="flex gap-3 mt-4">
 
-        <button type="submit"
-                class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg">
+        <button class="bg-green-600 text-white px-4 py-2 rounded">
             Filtrer
         </button>
 
         <a href="{% url 'message_history' %}"
-           class="px-5 py-2 rounded-lg border hover:bg-gray-50">
-            Réinitialiser
+           class="border px-4 py-2 rounded">
+            Reset
         </a>
 
-        <a href="?{{ request.GET.urlencode }}&export=csv"
-           class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
-            Télécharger CSV
+        <a href="{% url 'message_history' %}?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}export=csv"
+           class="bg-blue-600 text-white px-4 py-2 rounded">
+            CSV
         </a>
 
     </div>
 
 </form>
 
-
+<!-- ================= TABLE ================= -->
 <div class="bg-white shadow rounded-lg overflow-x-auto">
 
-<table class="min-w-full table-auto border-collapse">
+<table class="w-full text-sm">
 
-<thead>
-
-<tr class="bg-gray-100 text-sm">
-
-<th class="p-3 text-left">Créé</th>
-<th class="p-3 text-left">Type</th>
-<th class="p-3 text-left">Statut</th>
-<th class="p-3 text-left">Téléphone</th>
-<th class="p-3 text-left">Message</th>
-<th class="p-3 text-left">Coût</th>
-<th class="p-3 text-left">Programmé</th>
-<th class="p-3 text-left">Envoyé</th>
-<th class="p-3 text-left">Campagne</th>
-
+<thead class="bg-gray-100">
+<tr>
+<th class="p-3">Date</th>
+<th class="p-3">Téléphone</th>
+<th class="p-3">Titre</th>
+<th class="p-3">Message</th>
+<th class="p-3">Statut</th>
+<th class="p-3">Coût</th>
 </tr>
-
 </thead>
 
-<tbody>
+<tbody id="tableBody">
 
 {% for m in messages %}
-
-<tr class="border-b hover:bg-gray-50">
-
-<td class="p-3 text-sm text-gray-700">
-{{ m.created_at|date:"d/m/Y H:i" }}
-</td>
-
-
-<td class="p-3 text-sm">
-
-{% if m.message_type == "campaign" %}
-
-<span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-semibold">
-Campagne
-</span>
-
-{% else %}
-
-<span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold">
-Simple
-</span>
-
-{% endif %}
-
-</td>
-
-
-<td class="p-3 text-sm">
-
-{% if m.status == "sent" %}
-<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-Envoyé
-</span>
-
-{% elif m.status == "scheduled" %}
-<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
-Planifié
-</span>
-
-{% elif m.status == "failed" %}
-<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-Échec
-</span>
-
-{% elif m.status == "pending" %}
-<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">
-En attente
-</span>
-
-{% endif %}
-
-</td>
-
-
-<td class="p-3 text-sm text-gray-700">
-{{ m.phone }}
-</td>
-
-
-<td class="p-3 text-sm text-gray-700 max-w-xs truncate">
-{{ m.message }}
-</td>
-
-
-<td class="p-3 text-sm text-gray-700">
-{{ m.cost|floatformat:2 }}
-</td>
-
-
-<td class="p-3 text-sm text-gray-700">
-
-{% if m.scheduled_at %}
-{{ m.scheduled_at|date:"d/m/Y H:i" }}
-{% endif %}
-
-</td>
-
-
-<td class="p-3 text-sm text-gray-700">
-
-{% if m.sent_at %}
-{{ m.sent_at|date:"d/m/Y H:i" }}
-{% endif %}
-
-</td>
-
-
-<td class="p-3 text-sm text-gray-700">
-
-{% if m.campaign %}
-<span class="text-purple-700 font-semibold">
-{{ m.campaign.name }}
-</span>
-{% else %}
--
-{% endif %}
-
-</td>
-
+<tr class="border-b">
+<td class="p-3">{{ m.created_at|date:"d/m H:i" }}</td>
+<td class="p-3">{{ m.phone }}</td>
+<td class="p-3">{{ m.title }}</td>
+<td class="p-3 truncate max-w-xs">{{ m.message }}</td>
+<td class="p-3">{{ m.status }}</td>
+<td class="p-3">{{ m.cost|floatformat:2 }}</td>
 </tr>
-
-{% empty %}
-
-<tr>
-<td class="p-6 text-center text-gray-500" colspan="9">
-Aucun résultat trouvé.
-</td>
-</tr>
-
 {% endfor %}
 
 </tbody>
@@ -222,33 +93,80 @@ Aucun résultat trouvé.
 
 </div>
 
-
-<!-- Pagination -->
-
-<div class="flex justify-center mt-6">
+<!-- ================= PAGINATION ================= -->
+<div class="mt-6 flex justify-center gap-2">
 
 {% if page_obj.has_previous %}
-
 <a href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}"
-class="px-4 py-2 border rounded-l bg-white hover:bg-gray-100">
+class="px-4 py-2 border rounded">
 Précédent
 </a>
-
 {% endif %}
 
-<span class="px-4 py-2 border bg-gray-100">
+<span class="px-4 py-2 border">
 Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
 </span>
 
 {% if page_obj.has_next %}
-
 <a href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}"
-class="px-4 py-2 border rounded-r bg-white hover:bg-gray-100">
+class="px-4 py-2 border rounded">
 Suivant
 </a>
-
 {% endif %}
 
 </div>
+
+<!-- ================= JS SEARCH LIVE ================= -->
+<script>
+
+const input = document.getElementById("searchInput")
+const tableBody = document.getElementById("tableBody")
+
+let timeout = null
+
+input.addEventListener("keyup", function() {
+
+    clearTimeout(timeout)
+
+    timeout = setTimeout(() => {
+
+        const query = input.value
+
+        fetch(`{% url 'message_search' %}?q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+
+            tableBody.innerHTML = ""
+
+            if (data.results.length === 0) {
+                tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center p-4 text-gray-500">
+                        Aucun résultat
+                    </td>
+                </tr>`
+                return
+            }
+
+            data.results.forEach(m => {
+
+                tableBody.innerHTML += `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3">${m.date}</td>
+                    <td class="p-3">${m.phone}</td>
+                    <td class="p-3">${m.title}</td>
+                    <td class="p-3 truncate max-w-xs">${m.message}</td>
+                    <td class="p-3">${m.status}</td>
+                    <td class="p-3">${m.cost}</td>
+                </tr>`
+            })
+
+        })
+
+    }, 300) // debounce
+
+})
+
+</script>
 
 {% endblock %}

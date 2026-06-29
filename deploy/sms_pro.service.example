@@ -1,0 +1,18 @@
+[Unit]
+Description=SMS Pro Gunicorn
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/sms_pro
+EnvironmentFile=/var/www/sms_pro/.env
+RuntimeDirectory=sms_pro
+RuntimeDirectoryMode=0755
+ExecStart=/var/www/sms_pro/venv/bin/gunicorn sms_platform.wsgi:application --workers 3 --bind unix:/run/sms_pro/sms_pro.sock
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

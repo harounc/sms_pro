@@ -1,0 +1,17 @@
+[Unit]
+Description=SMS Pro Celery Beat
+After=network.target mysql.service redis-server.service
+Requires=mysql.service redis-server.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/sms_pro
+EnvironmentFile=/var/www/sms_pro/.env
+StateDirectory=sms_pro
+ExecStart=/var/www/sms_pro/venv/bin/celery -A sms_platform beat --loglevel=INFO --schedule=/var/lib/sms_pro/celerybeat-schedule
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

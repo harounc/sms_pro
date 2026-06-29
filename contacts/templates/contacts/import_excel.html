@@ -2,84 +2,128 @@
 
 {% block content %}
 
-<h2 class="text-xl font-bold mb-6">
-    Importer contact Excel
+<h2 class="text-2xl font-bold text-green-600 mb-6">
+    Importer des contacts via Excel
 </h2>
 
-<form method="POST" enctype="multipart/form-data">
+<!-- ================= FORM ================= -->
+<div class="bg-white shadow rounded-lg p-6 mb-6">
+
+<form method="POST" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4">
 
     {% csrf_token %}
 
-    <input type="file" name="file" class="border p-2">
+    <input type="file" name="file"
+           class="border border-gray-300 p-2 rounded w-full md:w-auto">
 
-    <button class="bg-green-600 text-white px-4 py-2 rounded ml-4">
+    <button class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow transition">
         Importer
     </button>
 
 </form>
 
+</div>
 
-<!-- Résultats de l'importation -->
+
+<!-- ================= RÉSUMÉ ================= -->
 {% if results %}
-    <div class="bg-white shadow rounded-lg p-6 mt-6">
 
-        <h3 class="text-lg font-semibold mb-4">
-            Resumé de l'import
-        </h3>
+<div class="bg-white shadow rounded-lg p-6 mb-6">
 
-        <p><strong>Lignes du fichier :</strong> {{ results.total_rows }}</p>
-        <p class="text-green-600"><strong>Contacts importés :</strong> {{ results.created }}</p>
-        <p class="text-green-600"><strong>Doublons:</strong> {{ results.duplicates|length }}</p>
-        <p class="text-red-600"><strong>Invalides:</strong> {{ results.invalid|length }}</p>
+    <h3 class="text-lg font-semibold mb-4 text-gray-700">
+        Résumé de l'import
+    </h3>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+
+        <div class="bg-gray-100 p-4 rounded">
+            <p class="text-sm text-gray-500">Lignes</p>
+            <p class="text-xl font-bold">{{ results.total_rows }}</p>
+        </div>
+
+        <div class="bg-green-100 p-4 rounded">
+            <p class="text-sm text-green-700">Importés</p>
+            <p class="text-xl font-bold text-green-600">{{ results.created }}</p>
+        </div>
+
+        <div class="bg-orange-100 p-4 rounded">
+            <p class="text-sm text-orange-700">Doublons</p>
+            <p class="text-xl font-bold text-orange-600">{{ results.duplicates|length }}</p>
+        </div>
+
+        <div class="bg-red-100 p-4 rounded">
+            <p class="text-sm text-red-700">Invalides</p>
+            <p class="text-xl font-bold text-red-600">{{ results.invalid|length }}</p>
+        </div>
+
     </div>
+
+</div>
+
 {% endif %}
 
 
-<!-- Contenu du tableau importé -->
-
+<!-- ================= TABLE ================= -->
 {% if rows_data %}
 
-<div class="bg-white shadow rounded-lg p-6 mt-6">
+<div class="bg-white shadow rounded-lg p-6">
 
-<h3 class="text-lg font-semibold mb-4">
-Contenu du fichier importÃ©
+<h3 class="text-lg font-semibold mb-4 text-gray-700">
+Détails de l'import
 </h3>
 
 <div class="overflow-x-auto">
 
-<table class="w-full border">
+<table class="w-full text-sm">
 
-<thead class="bg-gray-100">
-
+<thead class="bg-gray-100 text-left">
 <tr>
-<th class="p-3">TÃ©lÃ©phone</th>
+<th class="p-3">Téléphone</th>
 <th class="p-3">Nom</th>
 <th class="p-3">Email</th>
 <th class="p-3">Statut</th>
 </tr>
-
 </thead>
 
 <tbody>
 
 {% for row in rows_data %}
 
-<tr class="border-t">
+<tr class="border-t
+{% if row.status == 'imported' %}bg-green-50
+{% elif row.status == 'duplicate' %}bg-orange-50
+{% elif row.status == 'invalid' %}bg-red-50
+{% elif row.status == 'error' %}bg-gray-100
+{% endif %}
+hover:bg-gray-50 transition">
 
-<td class="p-2">{{ row.phone }}</td>
-<td class="p-2">{{ row.name }}</td>
-<td class="p-2">{{ row.email }}</td>
+<td class="p-3 font-medium">{{ row.phone }}</td>
 
-<td class="p-2">
+<td class="p-3">{{ row.name|default:"-" }}</td>
+
+<td class="p-3">{{ row.email|default:"-" }}</td>
+
+<td class="p-3">
 
 {% if row.status == "imported" %}
-<span class="text-green-600 font-semibold">ImportÃ©</span>
+<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+✔ Importé
+</span>
 
 {% elif row.status == "duplicate" %}
-<span class="text-orange-600">Doublon</span>
+<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-xs font-semibold">
+⚠ Doublon
+</span>
 
 {% elif row.status == "invalid" %}
-<span class="text-red-600">Invalide</span>
+<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-semibold">
+✖ Invalide
+</span>
+
+{% elif row.status == "error" %}
+<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold">
+💥 Erreur
+</span>
 {% endif %}
 
 </td>
@@ -97,7 +141,5 @@ Contenu du fichier importÃ©
 </div>
 
 {% endif %}
-
-
 
 {% endblock %}

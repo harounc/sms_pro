@@ -1,161 +1,493 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - ISS SMS</title>
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <style>
+        :root {
+            --iss-green: #009846;
+            --iss-orange: #f58200;
+            --iss-orange-hot: #ff6b00;
+            --iss-ink: #18212f;
+            --iss-muted: #667085;
+            --iss-line: #d9dee8;
+        }
 
-<title>Connexion - ISS SMS</title>
+        * {
+            box-sizing: border-box;
+        }
 
-<script src="https://cdn.tailwindcss.com"></script>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--iss-ink);
+            background:
+                radial-gradient(circle at 14% 16%, rgba(245, 130, 0, 0.18), transparent 28%),
+                radial-gradient(circle at 86% 80%, rgba(0, 152, 70, 0.15), transparent 30%),
+                linear-gradient(135deg, #f7f9fc 0%, #eef3f7 48%, #f9fbf8 100%);
+        }
 
-<style>
-body { font-family: Georgia, serif; }
-</style>
+        .login-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 18px;
+        }
 
+        .login-panel {
+            width: min(1040px, 100%);
+            min-height: 620px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.82);
+            box-shadow: 0 26px 80px rgba(24, 33, 47, 0.16);
+        }
+
+        .brand-side {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 44px;
+            color: white;
+            background:
+                linear-gradient(145deg, rgba(0, 152, 70, 0.96), rgba(0, 152, 70, 0.90)),
+                url("{% static 'images/logo_iss.jpg' %}") center / 76% auto no-repeat;
+        }
+
+        .brand-side::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(90deg, rgba(0, 152, 70, 0.34), rgba(0, 152, 70, 0.18)),
+                linear-gradient(0deg, rgba(245, 130, 0, 0.18), transparent 42%);
+        }
+
+        .brand-content,
+        .brand-footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-badge {
+            width: fit-content;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            border-radius: 999px;
+            background: rgba(245, 130, 0, 0.22);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .brand-title {
+            max-width: 460px;
+            margin: 28px 0 16px;
+            font-size: clamp(34px, 5vw, 56px);
+            line-height: 1.02;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .brand-copy {
+            max-width: 430px;
+            color: rgba(255, 255, 255, 0.86);
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .brand-footer {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .brand-stat {
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.10);
+        }
+
+        .brand-stat strong,
+        .brand-stat span {
+            display: block;
+        }
+
+        .brand-stat strong {
+            font-size: 20px;
+            line-height: 1.1;
+        }
+
+        .brand-stat span {
+            margin-top: 5px;
+            color: rgba(255, 255, 255, 0.74);
+            font-size: 12px;
+        }
+
+        .form-side {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 44px;
+            background: rgba(255, 255, 255, 0.94);
+        }
+
+        .login-card {
+            width: min(100%, 390px);
+        }
+
+        .logo-lockup {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 32px;
+        }
+
+        .logo-frame {
+            width: 72px;
+            height: 72px;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            border: 1px solid #edf0f5;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 10px 26px rgba(24, 33, 47, 0.08);
+        }
+
+        .logo-frame img {
+            width: 62px;
+            height: 62px;
+            object-fit: contain;
+        }
+
+        .logo-text strong,
+        .logo-text span {
+            display: block;
+        }
+
+        .logo-text strong {
+            font-size: 20px;
+            line-height: 1.15;
+        }
+
+        .logo-text span {
+            margin-top: 4px;
+            color: var(--iss-muted);
+            font-size: 13px;
+        }
+
+        .form-title {
+            margin: 0;
+            font-size: 30px;
+            line-height: 1.16;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .form-subtitle {
+            margin: 10px 0 28px;
+            color: var(--iss-muted);
+            font-size: 15px;
+            line-height: 1.55;
+        }
+
+        .alert-error {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border: 1px solid #f7c8c8;
+            border-radius: 8px;
+            color: #991b1b;
+            background: #fff1f1;
+            font-size: 14px;
+        }
+
+        .field-group {
+            margin-bottom: 18px;
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #344054;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .field-input {
+            width: 100%;
+            height: 48px;
+            padding: 0 14px;
+            border: 1px solid var(--iss-line);
+            border-radius: 8px;
+            color: var(--iss-ink);
+            background: #fff;
+            outline: none;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .field-input:focus {
+            border-color: var(--iss-green);
+            box-shadow: 0 0 0 4px rgba(0, 152, 70, 0.13);
+        }
+
+        .password-wrap {
+            position: relative;
+        }
+
+        .password-wrap .field-input {
+            padding-right: 76px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            height: 34px;
+            padding: 0 11px;
+            border: 0;
+            border-radius: 6px;
+            color: var(--iss-green);
+            background: #e9f8f0;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin: 8px 0 22px;
+        }
+
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #475467;
+            font-size: 14px;
+        }
+
+        .remember input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--iss-green);
+        }
+
+        .submit-button {
+            width: 100%;
+            height: 50px;
+            border: 0;
+            border-radius: 8px;
+            color: white;
+            background: linear-gradient(135deg, var(--iss-orange), var(--iss-orange-hot));
+            box-shadow: 0 14px 28px rgba(245, 130, 0, 0.28);
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 34px rgba(245, 130, 0, 0.34);
+        }
+
+        .forgot-link {
+            display: inline-block;
+            margin-top: 18px;
+            color: var(--iss-green);
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 860px) {
+            .login-panel {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
+            .brand-side {
+                min-height: 280px;
+                padding: 30px;
+            }
+
+            .brand-footer {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-stat {
+                display: none;
+            }
+
+            .form-side {
+                padding: 30px 22px 34px;
+            }
+        }
+
+        @media (max-width: 460px) {
+            .login-shell {
+                padding: 0;
+            }
+
+            .login-panel {
+                min-height: 100vh;
+                border: 0;
+                border-radius: 0;
+            }
+
+            .brand-side {
+                min-height: 220px;
+            }
+
+            .logo-lockup {
+                margin-bottom: 24px;
+            }
+
+            .form-title {
+                font-size: 26px;
+            }
+        }
+    </style>
 </head>
+<body>
+    <main class="login-shell">
+        <section class="login-panel" aria-label="Connexion ISS SMS">
+            <aside class="brand-side">
+                <div class="brand-content">
+                    <div class="brand-badge">ISS SMS</div>
+                    <h1 class="brand-title">Pilotage SMS professionnel</h1>
+                    <p class="brand-copy">
+                        Accédez à votre espace pour envoyer, programmer et suivre vos campagnes SMS en toute simplicité.
+                    </p>
+                </div>
 
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+                <div class="brand-footer" aria-label="Fonctionnalités principales">
+                    <div class="brand-stat">
+                        <strong>SMS</strong>
+                        <span>simples et campagnes</span>
+                    </div>
+                    <div class="brand-stat">
+                        <strong>Contacts</strong>
+                        <span>groupes et imports</span>
+                    </div>
+                    <div class="brand-stat">
+                        <strong>Suivi</strong>
+                        <span>historique détaillé</span>
+                    </div>
+                </div>
+            </aside>
 
-<div class="bg-white p-10 rounded-xl shadow-lg w-96">
+            <section class="form-side">
+                <div class="login-card">
+                    <div class="logo-lockup">
+                        <div class="logo-frame">
+                            <img src="{% static 'images/logo_iss.jpg' %}" alt="Ivoire Soft Services">
+                        </div>
+                        <div class="logo-text">
+                            <strong>Ivoire Soft Services</strong>
+                            <span>Plateforme SMS</span>
+                        </div>
+                    </div>
 
-<!-- Logo -->
-<div class="flex justify-center mb-4">
+                    <h2 class="form-title">Connexion</h2>
+                    <p class="form-subtitle">
+                        Renseignez vos identifiants pour accéder à votre tableau de bord.
+                    </p>
 
-<img src="{% static 'images/logo_iss.jpg' %}"
-alt="Logo"
-class="h-16">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert-error">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
 
-</div>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
 
+                        <div class="field-group">
+                            <label class="field-label" for="username">Nom d'utilisateur</label>
+                            <input
+                                type="text"
+                                name="username"
+                                id="username"
+                                class="field-input"
+                                value="{{ request.POST.username }}"
+                                autocomplete="username"
+                                required
+                                autofocus>
+                        </div>
 
-<!-- Nom plateforme -->
-<h1 class="text-center text-xl font-bold text-gray-700 mb-2">
-ISS SMS
-</h1>
+                        <div class="field-group">
+                            <label class="field-label" for="password">Mot de passe</label>
+                            <div class="password-wrap">
+                                <input
+                                    type="password"
+                                    name="password"
+                                    id="password"
+                                    class="field-input"
+                                    autocomplete="current-password"
+                                    required>
+                                <button
+                                    type="button"
+                                    class="toggle-password"
+                                    id="togglePassword"
+                                    aria-controls="password"
+                                    aria-label="Afficher le mot de passe">
+                                    Voir
+                                </button>
+                            </div>
+                        </div>
 
+                        <div class="form-row">
+                            <label class="remember">
+                                <input type="checkbox" name="remember_me">
+                                <span>Se souvenir de moi</span>
+                            </label>
+                        </div>
 
-<!-- Titre -->
-<h2 class="text-2xl font-bold text-green-600 mb-6 text-center">
-Connexion
-</h2>
+                        <button type="submit" class="submit-button">
+                            Se connecter
+                        </button>
 
+                        <a href="{% url 'password_reset' %}" class="forgot-link">
+                            Mot de passe oublié ?
+                        </a>
+                    </form>
+                </div>
+            </section>
+        </section>
+    </main>
 
-{% if request.method == "POST" and messages %}
-{% for message in messages %}
+    <script>
+        const toggleButton = document.getElementById("togglePassword");
+        const passwordInput = document.getElementById("password");
 
-<div class="mb-4 p-3 bg-red-100 text-red-700 rounded">
-{{ message }}
-</div>
-
-{% endfor %}
-{% endif %}
-
-
-<form method="post">
-
-{% csrf_token %}
-
-<div class="mb-4">
-
-<label class="block mb-2 text-gray-600">
-Nom d'utilisateur
-</label>
-
-<input type="text"
-name="username"
-class="w-full border p-2 rounded focus:ring-2 focus:ring-green-400">
-
-</div>
-
-
-<!-- Mot de passe field -->
-<div class="mb-4">
-
-    <label class="block mb-2 text-gray-600">
-        Mot de passe
-    </label>
-
-<div class="relative">
-
-<input type="password"
-name="password"
-id="password"
-class="w-full border p-2 rounded focus:ring-2 focus:ring-green-400">
-
-<button type="button"
-onclick="togglePassword()"
-class="absolute right-2 top-2 text-gray-500">
-
-👁
-
-</button>
-
-</div>
-
-</div>
-
-
-
-
-<!-- Se souvenir de moi -->
-<div class="flex items-center justify-between mb-6">
-
-<label class="flex items-center gap-2 text-sm text-gray-600">
-
-<input type="checkbox"
-name="remember_me"
-class="rounded border-gray-300">
-
-Se souvenir de moi
-
-</label>
-
-</div>
-
-
-<button type="submit"
-class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">
-
-Se connecter
-
-</button>
-
-
-<!-- Password Reset -->
-<div class="text-center mt-4">
-
-<a href="{% url 'password_reset' %}"
-class="text-sm text-green-600 hover:underline">
-
-Mot de passe oublié ?
-
-</a>
-
-</div>
-
-</form>
-
-</div>
-
-<!-- JavaScript for password toggle -->
-<script>
-
-function togglePassword()
-{
-const password = document.getElementById("password")
-
-if (password.type === "password")
-{
-password.type = "text"
-}
-else
-{
-password.type = "password"
-}
-
-}
-
-</script>
-
-
+        toggleButton.addEventListener("click", function() {
+            const isPassword = passwordInput.type === "password";
+            passwordInput.type = isPassword ? "text" : "password";
+            toggleButton.textContent = isPassword ? "Masquer" : "Voir";
+            toggleButton.setAttribute(
+                "aria-label",
+                isPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"
+            );
+        });
+    </script>
 </body>
 </html>

@@ -31,6 +31,12 @@ Modifier un Groupe de Contacts
 
 {% csrf_token %}
 
+{% if error %}
+<div class="bg-red-100 text-red-800 p-3 mb-4 rounded">
+    {{ error }}
+</div>
+{% endif %}
+
 <!-- NOM -->
 
 <label class="block text-sm font-medium text-gray-700 mb-2">

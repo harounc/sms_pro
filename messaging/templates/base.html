@@ -5,12 +5,37 @@
     <meta charset="UTF-8">
     <title>{% block title %}SMS Platform{% endblock %}</title>
 
-    <!-- Tailwind (temporaire CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
 
     <style>
-        body {
-            font-family: Georgia, serif;
+        body { font-family: Georgia, serif; }
+
+        /* Toasts */
+        #toast-container { z-index: 9999; }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            min-width: 320px;
+            max-width: 420px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            animation: slideIn 0.35s ease;
+            cursor: pointer;
+        }
+
+        .toast.hiding { animation: slideOut 0.3s ease forwards; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to   { opacity: 0; transform: translateX(110%); }
         }
     </style>
 </head>
@@ -32,9 +57,62 @@
 
     </div>
 
+    <!-- ================================================
+         TOAST NOTIFICATIONS (Django messages)
+    ================================================ -->
+    <div id="toast-container" class="fixed top-5 right-5 flex flex-col gap-3 pointer-events-none">
+    {% if messages %}
+        {% for message in messages %}
+        <div class="toast pointer-events-auto
+            {% if message.tags == 'success' %}bg-green-600 text-white
+            {% elif message.tags == 'error' %}bg-red-600 text-white
+            {% elif message.tags == 'warning' %}bg-amber-500 text-white
+            {% else %}bg-blue-600 text-white{% endif %}"
+            onclick="dismissToast(this)">
+
+            <!-- Icône -->
+            <span class="text-xl leading-none mt-0.5">
+                {% if message.tags == 'success' %}✅
+                {% elif message.tags == 'error' %}❌
+                {% elif message.tags == 'warning' %}⚠️
+                {% else %}ℹ️{% endif %}
+            </span>
+
+            <!-- Texte -->
+            <div class="flex-1">
+                <p class="font-semibold text-sm">
+                    {% if message.tags == 'success' %}Succès
+                    {% elif message.tags == 'error' %}Erreur
+                    {% elif message.tags == 'warning' %}Avertissement
+                    {% else %}Information{% endif %}
+                </p>
+                <p class="text-sm opacity-90 mt-0.5">{{ message }}</p>
+            </div>
+
+            <!-- Bouton fermer -->
+            <button onclick="dismissToast(this.parentElement)" class="opacity-70 hover:opacity-100 text-lg leading-none">&times;</button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    </div>
+
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        lucide.createIcons();
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+
+        function dismissToast(el) {
+            el.classList.add('hiding');
+            el.addEventListener('animationend', () => el.remove());
+        }
+
+        // Auto-dismiss après 5 secondes
+        document.querySelectorAll('.toast').forEach(function(toast, i) {
+            setTimeout(function() {
+                if (toast.isConnected) dismissToast(toast);
+            }, 5000 + i * 500);
+        });
     </script>
 
 </body>

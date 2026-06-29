@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-2xl font-bold text-orange-600 mb-6">
+Modifier un expéditeur
+</h2>
+
+<div class="bg-white p-6 rounded-xl shadow max-w-lg">
+
+<form method="POST" class="space-y-4">
+{% csrf_token %}
+
+<!-- NOM -->
+<div>
+<label class="block text-sm font-semibold mb-2">
+Nom de l'expéditeur <span class="text-red-500">*</span>
+</label>
+
+<input type="text"
+name="name"
+value="{{ sender.name }}"
+maxlength="11"
+required
+class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500 outline-none">
+</div>
+
+<!-- INFO -->
+<div class="text-sm text-gray-500">
+⚠ Toute modification nécessite une revalidation par l’administrateur plateforme.
+</div>
+
+<!-- ACTIONS -->
+<div class="flex gap-3 mt-4">
+
+<button type="submit"
+class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg">
+Enregistrer
+</button>
+
+<a href="{% url 'senders_list' %}"
+class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-5 py-2 rounded-lg">
+Annuler
+</a>
+
+</div>
+
+</form>
+
+</div>
+
+{% endblock %}

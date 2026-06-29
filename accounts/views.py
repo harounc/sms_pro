@@ -1,7 +1,3 @@
-import random
-import string
-from datetime import timedelta
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
@@ -15,24 +11,21 @@ from messaging.models import Message
 from .models import Company, User, CompanyTransaction, UserCreditTransaction
 from .forms import (
     CompanyUserCreateForm,
-    CompanyUserUpdateForm,
     CompanyForm,
     RechargeForm,
     UserRechargeForm,
-    UserProfileForm
+    UserProfileForm,
+    UserForm,
 )
-from .utils import get_managed_company_or_forbidden
+from .utils import get_managed_company_or_403, generate_password
 
-import json
-
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, update_session_auth_hash
 
 
 
-
-# =================================================
-# PAGE DE CONNEXION
-# =================================================
+# ===============================
+# LOGIN
+# ===============================
 def login_view(request):
 
     if request.method == "POST":
@@ -43,36 +36,34 @@ def login_view(request):
 
         user = authenticate(request, username=username, password=password)
 
-        if user is not None:
+        if user is None:
             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
+            return redirect("login")
 
-            login(request, user)
+        if user.company and not user.company.is_active:
+            messages.error(request, "Votre entreprise est désactivée.")
+            return redirect("login")
 
-            # Gestion "Se souvenir de moi"
-            if not remember_me:
-                request.session.set_expiry(0)
+        login(request, user)
 
-            return redirect("redirect_after_login")
+        if not remember_me:
+            request.session.set_expiry(0)
+
+        return redirect("redirect_after_login")
 
     return render(request, "accounts/login.html")
 
 
-# ---------------------------------------------------
-# DASHBOARD ADMIN PLATEFORME
-# ---------------------------------------------------
-
+# ===============================
+# DASHBOARD SUPER ADMIN
+# ===============================
 @login_required
 def accounts_dashboard_view(request):
 
-    # sécurité : seulement admin plateforme
-    if request.user.role != "admin" or request.user.company is not None:
+    if not request.user.is_super_admin():
         return redirect("dashboard")
 
     today = timezone.now().date()
-
-    # =================================================
-    # KPI GLOBAL
-    # =================================================
 
     total_companies = Company.objects.count()
 
@@ -103,347 +94,43 @@ def accounts_dashboard_view(request):
         total=Sum("balance")
     )["total"] or 0
 
-
-    # =================================================
-    # TOP ENTREPRISES
-    # =================================================
-
     top_companies = Company.objects.annotate(
         sms_count=Count("message", filter=Q(message__status="sent"))
     ).order_by("-sms_count")[:5]
-
-
-    # =================================================
-    # TOP UTILISATEURS
-    # =================================================
 
     top_users = User.objects.annotate(
         sms_count=Count("message", filter=Q(message__status="sent"))
     ).order_by("-sms_count")[:5]
 
-
-    # =================================================
-    # HISTORIQUE RECHARGEMENT
-    # =================================================
-
     recent_recharges = CompanyTransaction.objects.filter(
         transaction_type="credit"
     ).select_related("company").order_by("-created_at")[:10]
 
-
-    # =================================================
-    # TAUX CONSOMMATION ENTREPRISE
-    # =================================================
-
-    companies_consumption = []
-
-    companies = Company.objects.annotate(
-        total_spent=Sum("message__cost"),
-        total_sms=Count("message", filter=Q(message__status="sent"))
-    ).filter(total_sms__gt=0)
-
-    for comp in companies:
-
-        spent = comp.total_spent or 0
-        balance = comp.balance or 0
-
-        if (balance + spent) > 0:
-            rate = (spent / (balance + spent)) * 100
-        else:
-            rate = 0
-
-        companies_consumption.append({
-            "name": comp.name,
-            "spent": float(spent),
-            "balance": float(balance),
-            "rate": round(rate, 2)
-        })
-
-    companies_consumption = sorted(
-        companies_consumption,
-        key=lambda x: x["spent"],
-        reverse=True
-    )[:10]
-
-
-    # =================================================
-    # SMS 7 DERNIERS JOURS
-    # =================================================
-
-    daily_data = []
-
-    start_date = today - timedelta(days=6)
-
-    for i in range(7):
-
-        day = start_date + timedelta(days=i)
-
-        count = Message.objects.filter(
-            status="sent",
-            sent_at__date=day
-        ).count()
-
-        daily_data.append({
-            "date": day.strftime("%d/%m"),
-            "count": count
-        })
-
-
-    # =================================================
-    # CONTEXT
-    # =================================================
-
     context = {
-
         "total_companies": total_companies,
         "active_companies": active_companies,
-
         "total_sms": total_sms,
         "total_revenue": total_revenue,
-
         "sms_today": sms_today,
         "active_users": active_users,
-
         "total_balance": total_balance,
-
         "top_companies": top_companies,
         "top_users": top_users,
-
         "recent_recharges": recent_recharges,
-
-        "companies_consumption": companies_consumption,
-
-        "daily_data": json.dumps(daily_data),
-
     }
 
-    return render(
-        request,
-        "accounts/dashboard.html",
-        context
-    )
+    return render(request, "accounts/dashboard.html", context)
 
 
-# ---------------------------------------------------
-# UTILISATEURS ENTREPRISE
-# ---------------------------------------------------
-
-# LISTE DES UTILISATEURS D'UNE ENTREPRISE
-@login_required
-def company_users_list_view(request, company_id):
-
-    company = get_managed_company_or_forbidden(request, company_id)
-
-    if company is None:
-        return render(request, "messaging/forbidden.html")
-
-    # ADMIN PLATEFORME
-    if request.user.company is None:
-        users = User.objects.filter(company=company)
-
-    # ADMIN ENTREPRISE
-    else:
-        users = User.objects.filter(
-            company=company,
-            role="user"
-        )
-
-    return render(request, "accounts/company_users_list.html", {
-        "company": company,
-        "users": users,
-    })
-
-
-# CRÉATION D'UTILISATEUR POUR UNE ENTREPRISE
-@login_required
-def company_user_create_view(request, company_id):
-
-    company = get_managed_company_or_forbidden(request, company_id)
-
-    if company is None:
-        return render(request, "messaging/forbidden.html")
-
-    is_company_admin = request.user.company is not None
-
-    if request.method == "POST":
-
-        form = CompanyUserCreateForm(request.POST)
-
-        # 🔴 IMPORTANT : assigner company avant validation
-        form.instance.company = company
-
-        if is_company_admin:
-            form.fields["role"].choices = [("user", "User")]
-
-        if form.is_valid():
-
-            user_obj = form.save(commit=False)
-
-            if is_company_admin:
-                user_obj.role = "user"
-
-            user_obj.save()
-
-            return render(
-                request,
-                "accounts/user_created.html",
-                {
-                    "created_user": user_obj,
-                    "company": company,
-                }
-            )
-
-        else:
-            print("Form errors:", form.errors)
-
-            messages.error(
-                request,
-                "Erreur lors de la création de l'utilisateur."
-            )
-
-    else:
-
-        form = CompanyUserCreateForm(
-            initial={
-                "is_active": True,
-                "role": "user"
-            }
-        )
-
-        form.instance.company = company
-
-        if is_company_admin:
-            form.fields["role"].choices = [("user", "User")]
-
-    return render(
-        request,
-        "accounts/company_user_form.html",
-        {
-            "form": form,
-            "company": company,
-            "is_edit": False,
-        }
-    )
-
-
-# MODIFICATION D'UTILISATEUR POUR UNE ENTREPRISE
-@login_required
-def company_user_update_view(request, company_id, user_id):
-
-    company = get_managed_company_or_forbidden(request, company_id)
-
-    if company is None:
-        return render(request, "messaging/forbidden.html")
-
-    user_obj = get_object_or_404(User, pk=user_id, company=company)
-
-    is_company_admin = request.user.company is not None
-
-    if request.method == "POST":
-
-        form = CompanyUserUpdateForm(request.POST, instance=user_obj)
-
-        if is_company_admin:
-            form.fields['role'].choices = [('user', 'User')]
-
-        if form.is_valid():
-
-            updated_user = form.save(commit=False)
-
-            if is_company_admin:
-                updated_user.role = 'user'
-
-            updated_user.save()
-
-            messages.success(request, "Utilisateur mis à jour.")
-
-            return redirect(
-                'company_users_list',
-                company_id=company.id
-            )
-
-    else:
-
-        form = CompanyUserUpdateForm(instance=user_obj)
-
-        if is_company_admin:
-            form.fields['role'].choices = [('user', 'User')]
-
-    return render(request, "accounts/company_user_form.html", {
-        "form": form,
-        "company": company,
-        "user_obj": user_obj,
-        "is_edit": True,
-    })
-
-
-# ACTIVATION/DÉSACTIVATION D'UTILISATEUR POUR UNE ENTREPRISE
-@login_required
-def company_user_toggle_active_view(request, company_id, user_id):
-
-    company = get_managed_company_or_forbidden(request, company_id)
-
-    if company is None:
-        return render(request, "messaging/forbidden.html")
-
-    if request.method != "POST":
-        return redirect('company_users_list', company_id=company.id)
-
-    user_obj = get_object_or_404(User, pk=user_id, company=company)
-
-    if user_obj.pk == request.user.pk:
-        messages.error(request, "Action non autorisée.")
-        return redirect('company_users_list', company_id=company.id)
-
-    user_obj.is_active = not user_obj.is_active
-    user_obj.save(update_fields=['is_active'])
-
-    return redirect('company_users_list', company_id=company.id)
-
-
-# SUPPRESSION D'UTILISATEUR POUR UNE ENTREPRISE
-@login_required
-def company_user_delete_view(request, company_id, user_id):
-
-    company = get_managed_company_or_forbidden(request, company_id)
-
-    if company is None:
-        return render(request, "messaging/forbidden.html")
-
-    if request.method != "POST":
-        return redirect('company_users_list', company_id=company.id)
-
-    user_obj = get_object_or_404(User, pk=user_id, company=company)
-
-    # empêcher suppression de soi-même
-    if user_obj.pk == request.user.pk:
-        messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
-        return redirect('company_users_list', company_id=company.id)
-
-    # empêcher suppression de l'admin entreprise
-    if user_obj.role == "admin":
-        messages.error(request, "Impossible de supprimer l'administrateur de l'entreprise.")
-        return redirect('company_users_list', company_id=company.id)
-
-    user_obj.delete()
-
-    messages.success(request, "Utilisateur supprimé avec succès.")
-
-    return redirect('company_users_list', company_id=company.id)
-
-
-
-
-
-# ---------------------------------------------------
+# ===============================
 # ENTREPRISES
-# ---------------------------------------------------
+# ===============================
 
-# LISTE DES ENTREPRISES
+# list companies
 @login_required
 def company_list_view(request):
 
-    if request.user.role != "admin":
+    if not request.user.is_super_admin():
         return redirect("dashboard")
 
     companies = Company.objects.all()
@@ -453,21 +140,12 @@ def company_list_view(request):
     })
 
 
-# GÉNÉRATION DE MOT DE PASSE ALÉATOIRE
-def generate_password(length=10):
 
-    characters = string.ascii_letters + string.digits
-
-    return ''.join(
-        random.choice(characters) for _ in range(length)
-    )
-
-
-# CRÉATION D'ENTREPRISE
+# create company
 @login_required
 def company_create_view(request):
 
-    if request.user.role != "admin":
+    if not request.user.is_super_admin():
         return redirect("dashboard")
 
     if request.method == "POST":
@@ -479,10 +157,9 @@ def company_create_view(request):
             company = form.save()
 
             username = company.name.lower().replace(" ", "") + "_admin"
-
             raw_password = generate_password()
 
-            user = User.objects.create(
+            User.objects.create(
                 username=username,
                 company=company,
                 role="admin",
@@ -499,120 +176,175 @@ def company_create_view(request):
     else:
         form = CompanyForm()
 
-    return render(request, "accounts/company_form.html", {
-        "form": form
-    })
+    return render(request, "accounts/company_form.html", {"form": form})
 
 
-# MODIFICATION D'ENTREPRISE
+# update company
 @login_required
 def company_update_view(request, pk):
 
-    if request.user.role != "admin":
+    # 🔒 uniquement super admin
+    if not request.user.is_super_admin():
         return redirect("dashboard")
 
     company = get_object_or_404(Company, pk=pk)
 
     if request.method == "POST":
 
-        form = CompanyForm(request.POST, instance=company)
+        company.name = request.POST.get("name")
+        company.is_active = request.POST.get("is_active") == "on"
 
-        if form.is_valid():
-            form.save()
-            return redirect("company_list")
+        company.save()
 
-    else:
-
-        form = CompanyForm(instance=company)
-
-    return render(request, "accounts/company_form.html", {
-        "form": form
-    })
-
-
-# SUPPRESSION D'ENTREPRISE
-@login_required
-def company_delete_view(request, pk):
-
-    if request.user.role != "admin":
-        return redirect("dashboard")
-
-    company = get_object_or_404(Company, pk=pk)
-
-    if request.method == "POST":
-
-        company.delete()
+        messages.success(request, "Entreprise mise à jour avec succès.")
 
         return redirect("company_list")
 
-    return render(request, "accounts/company_confirm_delete.html", {
-        "company": company
+    return render(request, "accounts/company_form.html", {
+        "company": company,
+        "is_edit": True
     })
 
+# delete company
+@login_required
+def company_delete_view(request, pk):
 
-# ---------------------------------------------------
-# RECHARGES ENTREPRISE
-# ---------------------------------------------------
+    # 🔒 uniquement super admin
+    if not request.user.is_super_admin():
+        return redirect("dashboard")
 
-# RECHARGEMENT D'ENTREPRISE
+    company = get_object_or_404(Company, pk=pk)
+
+    # 🔒 sécurité : éviter suppression entreprise liée au user actuel
+    if request.user.company == company:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre entreprise.")
+        return redirect("company_list")
+
+    company.delete()
+
+    messages.success(request, "Entreprise supprimée avec succès.")
+
+    return redirect("company_list")
+
+
+
 @login_required
 def company_recharge_view(request, pk):
 
-    if request.user.role != "admin":
-        return redirect("dashboard")
+    if not request.user.is_super_admin():
+        return render(request, "messaging/forbidden.html")
 
-    company = Company.objects.get(pk=pk)
+    company = get_object_or_404(Company, id=pk)
+
+    form = RechargeForm(request.POST or None)
 
     if request.method == "POST":
-
-        form = RechargeForm(request.POST)
 
         if form.is_valid():
 
             amount = form.cleaned_data["amount"]
 
-            company.balance += amount
-            company.save()
+            with transaction.atomic():
+                company = Company.objects.select_for_update().get(pk=company.pk)
+                company.balance += amount
+                company.save(update_fields=["balance"])
 
-            CompanyTransaction.objects.create(
-                company=company,
-                amount=amount,
-                transaction_type='credit',
-                description="Recharge admin"
-            )
+                CompanyTransaction.objects.create(
+                    company=company,
+                    amount=amount,
+                    transaction_type="credit",
+                    description="Recharge entreprise"
+                )
+
+            messages.success(request, f"Recharge de {amount} crédits effectuée")
 
             return redirect("company_list")
-
-    else:
-
-        form = RechargeForm()
 
     return render(request, "accounts/company_recharge.html", {
         "form": form,
         "company": company
     })
 
+# ===============================
+# USERS ENTREPRISE
+# ===============================
 
-# ---------------------------------------------------
-# RECHARGE UTILISATEUR
-# ---------------------------------------------------
-
-# RECHARGEMENT D'UTILISATEUR
+# list users
 @login_required
-def company_user_recharge_view(request, company_id, user_id):
+def company_users_list_view(request, company_id):
 
-    company = get_managed_company_or_forbidden(request, company_id)
+    company = get_managed_company_or_403(request, company_id)
 
     if company is None:
         return render(request, "messaging/forbidden.html")
 
-    if request.user.role != "admin":
+    users = User.objects.filter(
+        company=company
+        ).exclude(
+            id=request.user.id
+        ).exclude(
+            role="super_admin"
+        )
+
+    return render(request, "accounts/company_users_list.html", {
+        "company": company,
+        "users": users,
+    })
+
+
+# create user
+@login_required
+def company_user_create_view(request, company_id):
+
+    company = get_managed_company_or_403(request, company_id)
+
+    if company is None:
+        return render(request, "messaging/forbidden.html")
+
+    if request.method == "POST":
+
+        form = CompanyUserCreateForm(request.POST)
+        form.instance.company = company
+
+        if form.is_valid():
+
+            user_obj = form.save(commit=False)
+
+            # 🔒 sécurité
+            if not request.user.is_super_admin():
+                user_obj.role = "user"
+
+            user_obj.save()
+
+            return render(
+                request,
+                "accounts/user_created.html",
+                {
+                    "created_user": user_obj,
+                    "company": company,
+                }
+            )
+
+    else:
+        form = CompanyUserCreateForm()
+
+    return render(request, "accounts/company_user_form.html", {
+        "form": form,
+        "company": company,
+        "is_edit": False,
+    })
+
+
+# recharge user
+@login_required
+def company_user_recharge_view(request, company_id, user_id):
+
+    company = get_managed_company_or_403(request, company_id)
+
+    if company is None:
         return render(request, "messaging/forbidden.html")
 
     target_user = get_object_or_404(User, pk=user_id, company=company)
-
-    if target_user.role != "user":
-        return render(request, "messaging/forbidden.html")
 
     if request.method == "POST":
 
@@ -624,33 +356,28 @@ def company_user_recharge_view(request, company_id, user_id):
 
             if amount <= 0:
                 messages.error(request, "Montant invalide.")
-                return redirect(
-                    'company_user_recharge',
-                    company_id=company.id,
-                    user_id=target_user.id
-                )
-
-            if company.balance < amount:
-                messages.error(request, "Solde entreprise insuffisant.")
-                return redirect(
-                    'company_user_recharge',
-                    company_id=company.id,
-                    user_id=target_user.id
-                )
+                return redirect("company_users_list", company_id=company.id)
 
             with transaction.atomic():
 
+                company = Company.objects.select_for_update().get(pk=company.pk)
+                target_user = User.objects.select_for_update().get(pk=target_user.pk)
+
+                if company.balance < amount:
+                    messages.error(request, "Solde insuffisant.")
+                    return redirect("company_users_list", company_id=company.id)
+
                 company.balance -= amount
-                company.save(update_fields=['balance'])
+                company.save(update_fields=["balance"])
 
                 target_user.credit_balance += amount
-                target_user.save(update_fields=['credit_balance'])
+                target_user.save(update_fields=["credit_balance"])
 
                 CompanyTransaction.objects.create(
                     company=company,
                     amount=amount,
                     transaction_type='debit',
-                    description=f"Allocation crédit vers {target_user.username}"
+                    description=f"Recharge utilisateur {target_user.username}"
                 )
 
                 UserCreditTransaction.objects.create(
@@ -658,15 +385,12 @@ def company_user_recharge_view(request, company_id, user_id):
                     user=target_user,
                     amount=amount,
                     transaction_type='credit',
-                    description=f"Recharge par {request.user.username}"
+                    description="Recharge utilisateur"
                 )
 
-            messages.success(request, "Crédit utilisateur alimenté.")
+            messages.success(request, "Recharge effectuée.")
 
-            return redirect(
-                'company_users_list',
-                company_id=company.id
-            )
+            return redirect("company_users_list", company_id=company.id)
 
     else:
         form = UserRechargeForm()
@@ -679,10 +403,122 @@ def company_user_recharge_view(request, company_id, user_id):
 
 
 
+@login_required
+def company_user_update_view(request, company_id, user_id):
 
-# =====================================================
-# PROFIL UTILISATEUR
-# =====================================================
+    company = get_managed_company_or_403(request, company_id)
+
+    if company is None:
+        return render(request, "messaging/forbidden.html")
+
+    user_obj = get_object_or_404(
+        User,
+        id=user_id,
+        company=company
+    )
+
+    # 🔥 IMPORTANT : instance
+    form = UserForm(request.POST or None, instance=user_obj)
+
+    if request.method == "POST":
+
+        if form.is_valid():
+
+            user = form.save(commit=False)
+
+            # 🔒 sécurité rôle
+            if not request.user.is_super_admin():
+                user.role = user_obj.role
+
+            # 🔐 mot de passe
+            password = form.cleaned_data.get("password")
+            if password:
+                user.set_password(password)
+
+            user.save()
+
+            messages.success(request, "Utilisateur modifié avec succès.")
+
+            return redirect("company_users_list", company_id=company.id)
+
+        else:
+            messages.error(request, "Erreur dans le formulaire.")
+
+    return render(request, "accounts/company_user_form.html", {
+        "form": form,  # 🔥 ICI on envoie le form
+        "company": company,
+        "is_edit": True,
+        "target_user": user_obj
+    })
+
+
+# delete user
+@login_required
+def company_user_delete_view(request, company_id, user_id):
+
+    company = get_managed_company_or_403(request, company_id)
+
+    if company is None:
+        return render(request, "messaging/forbidden.html")
+
+    user_obj = get_object_or_404(
+        User,
+        id=user_id,
+        company=company
+    )
+
+    # 🔒 sécurité : ne pas supprimer soi-même
+    if user_obj == request.user:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
+        return redirect("company_users_list", company_id=company.id)
+
+    # 🔒 sécurité : ne pas supprimer super admin
+    if user_obj.is_super_admin():
+        messages.error(request, "Impossible de supprimer un super admin.")
+        return redirect("company_users_list", company_id=company.id)
+
+    user_obj.delete()
+
+    messages.success(request, "Utilisateur supprimé avec succès.")
+
+    return redirect("company_users_list", company_id=company.id)
+
+
+
+# ===============================
+# TOGGLE USER ACTIVE
+# ===============================
+@login_required
+def company_user_toggle_active_view(request, company_id, user_id):
+
+    company = get_managed_company_or_403(request, company_id)
+
+    if company is None:
+        return render(request, "messaging/forbidden.html")
+
+    user_obj = get_object_or_404(
+        User,
+        id=user_id,
+        company=company
+    )
+
+    # 🔒 sécurité : éviter désactivation super admin
+    if user_obj.is_super_admin():
+        messages.error(request, "Impossible de désactiver un super admin.")
+        return redirect("company_users_list", company_id=company.id)
+
+    # 🔄 toggle actif/inactif
+    user_obj.is_active = not user_obj.is_active
+    user_obj.save()
+
+    status = "activé" if user_obj.is_active else "désactivé"
+    messages.success(request, f"Utilisateur {status} avec succès.")
+
+    return redirect("company_users_list", company_id=company.id)
+
+
+
+
 @login_required
 def user_profile_view(request):
 
@@ -694,40 +530,51 @@ def user_profile_view(request):
 
         if form.is_valid():
 
-            user = form.save()
+            user = form.save(commit=False)
 
-            messages.success(
-                request,
-                "Profil mis à jour avec succès."
-            )
+            password = form.cleaned_data.get("password")
+
+            if password:
+                user.set_password(password)
+                update_session_auth_hash(request, user)
+
+            user.save()
+
+            messages.success(request, "Profil mis à jour avec succès")
 
             return redirect("user_profile")
 
     else:
-
         form = UserProfileForm(instance=user)
 
-    return render(
-        request,
-        "accounts/profile.html",
-        {
-            "form": form
-        }
-    )
+    return render(request, "accounts/profile.html", {
+        "form": form
+    })
 
 
-# =====================================================
-# ACTIVER/DÉSACTIVER ENTREPRISE
-# =====================================================
+
+
+# company toggle active
 @login_required
 def company_toggle_active_view(request, pk):
 
-    if request.user.role != "admin":
+    # 🔒 uniquement super admin
+    if not request.user.is_super_admin():
         return redirect("dashboard")
 
     company = get_object_or_404(Company, pk=pk)
 
+    # 🔒 sécurité : éviter de se bloquer soi-même
+    if request.user.company == company:
+        messages.error(request, "Vous ne pouvez pas désactiver votre propre entreprise.")
+        return redirect("company_list")
+
+    # 🔄 toggle actif / inactif
     company.is_active = not company.is_active
     company.save()
+
+    status = "activée" if company.is_active else "désactivée"
+
+    messages.success(request, f"Entreprise {status} avec succès.")
 
     return redirect("company_list")

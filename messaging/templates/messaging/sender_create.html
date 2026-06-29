@@ -2,28 +2,67 @@
 
 {% block content %}
 
-<h2 class="text-2xl font-bold mb-6">
+<h2 class="text-2xl font-bold mb-6 text-green-600">
 Créer un expéditeur
 </h2>
 
-<form method="POST" class="space-y-4">
+<div class="bg-white shadow rounded-lg p-6 max-w-lg">
+
+<form method="POST" class="space-y-5">
 
 {% csrf_token %}
 
-<label class="block font-semibold">
+<!-- ================= NOM ================= -->
+<div>
+
+<label class="block font-semibold mb-2">
 Nom de l'expéditeur
 </label>
 
 <input type="text"
-name="name"
-maxlength="11"
-required
-class="border rounded-lg p-3 w-full">
+       name="name"
+       maxlength="11"
+       required
+       value="{{ request.POST.name|default:'' }}"
+       placeholder="Ex: MYCOMPANY"
+       class="border rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500">
 
-<button class="bg-green-600 text-white px-6 py-3 rounded-lg">
-Créer
+<p class="text-sm text-gray-400 mt-1">
+Max 11 caractères (standard SMS)
+</p>
+
+{% if form.name.errors %}
+    <p class="text-red-500 text-sm mt-1">
+        {{ form.name.errors.0 }}
+    </p>
+{% endif %}
+
+</div>
+
+<!-- ================= ERREURS GLOBALES ================= -->
+{% if form.non_field_errors %}
+<div class="bg-red-100 text-red-700 p-3 rounded">
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+
+<!-- ================= ACTIONS ================= -->
+<div class="flex items-center gap-3">
+
+<button type="submit"
+        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition">
+    Créer
 </button>
 
+<a href="{% url 'senders_list' %}"
+   class="px-6 py-3 border rounded-lg hover:bg-gray-50">
+    Annuler
+</a>
+
+</div>
+
 </form>
+
+</div>
 
 {% endblock %}

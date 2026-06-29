@@ -12,6 +12,7 @@ venv/
 # Django
 db.sqlite3
 media/
+staticfiles/
 
 # Node
 node_modules/
@@ -22,6 +23,7 @@ static/css/output.css
 # IDE
 .vscode/
 .idea/
+*.code-workspace
 
 # OS
 .DS_Store

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="max-w-lg mx-auto">
+
+<!-- TITLE -->
+<h2 class="text-2xl font-bold text-orange-600 mb-6 text-center">
+    Supprimer un expéditeur
+</h2>
+
+<!-- CARD -->
+<div class="bg-white p-6 rounded-xl shadow">
+
+<!-- WARNING -->
+<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6 text-sm">
+    ⚠ Attention : Cette action est irréversible.<br>
+    L’expéditeur sera définitivement supprimé.
+</div>
+
+<!-- INFOS -->
+<div class="mb-6 space-y-2 text-sm">
+
+<p>
+<span class="font-semibold text-gray-600">Nom :</span>
+<span class="font-bold text-gray-800">{{ sender.name }}</span>
+</p>
+
+<p>
+<span class="font-semibold text-gray-600">Entreprise :</span>
+{{ sender.company.name|default:"-" }}
+</p>
+
+<p>
+<span class="font-semibold text-gray-600">Statut :</span>
+
+{% if sender.status == "approved" %}
+<span class="text-green-600 font-semibold">✔ Approuvé</span>
+{% elif sender.status == "pending" %}
+<span class="text-orange-600 font-semibold">⏳ En attente</span>
+{% else %}
+<span class="text-red-600 font-semibold">✖ Refusé</span>
+{% endif %}
+
+</p>
+
+</div>
+
+<!-- FORM -->
+<form method="POST">
+{% csrf_token %}
+
+<div class="flex justify-between items-center">
+
+<a href="{% url 'senders_list' %}"
+class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+Annuler
+</a>
+
+<button type="submit"
+class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg">
+Supprimer définitivement
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+{% endblock %}

@@ -2,51 +2,98 @@
 
 {% block content %}
 
-<h2 class="text-2xl font-bold mb-6">
+<h2 class="text-2xl font-bold mb-6 text-green-600">
 Mon Profil
 </h2>
 
-{% if messages %}
-{% for message in messages %}
-<div class="bg-green-100 text-green-800 p-3 mb-4 rounded">
-{{ message }}
-</div>
-{% endfor %}
-{% endif %}
-
-<form method="post" class="bg-white p-6 rounded shadow max-w-xl">
+<!-- ================= FORM ================= -->
+<form method="post" class="bg-white p-6 rounded-lg shadow max-w-xl space-y-5">
 
 {% csrf_token %}
 
-<div class="mb-4">
+<!-- ================= USERNAME ================= -->
+<div>
 <label class="block font-semibold mb-2">Nom d'utilisateur</label>
 {{ form.username }}
+{% if form.username.errors %}
+    <p class="text-red-500 text-sm mt-1">
+        {{ form.username.errors.0 }}
+    </p>
+{% endif %}
 </div>
 
-<div class="mb-4">
+<!-- ================= FIRST NAME ================= -->
+<div>
 <label class="block font-semibold mb-2">Prénom</label>
 {{ form.first_name }}
+{% if form.first_name.errors %}
+    <p class="text-red-500 text-sm mt-1">
+        {{ form.first_name.errors.0 }}
+    </p>
+{% endif %}
 </div>
 
-<div class="mb-4">
+<!-- ================= LAST NAME ================= -->
+<div>
 <label class="block font-semibold mb-2">Nom</label>
 {{ form.last_name }}
+{% if form.last_name.errors %}
+    <p class="text-red-500 text-sm mt-1">
+        {{ form.last_name.errors.0 }}
+    </p>
+{% endif %}
 </div>
 
-<div class="mb-4">
+<!-- ================= EMAIL ================= -->
+<div>
 <label class="block font-semibold mb-2">Email</label>
 {{ form.email }}
+{% if form.email.errors %}
+    <p class="text-red-500 text-sm mt-1">
+        {{ form.email.errors.0 }}
+    </p>
+{% endif %}
 </div>
 
-<div class="mb-4">
-<label class="block font-semibold mb-2">Nouveau mot de passe</label>
-{{ form.password }}
+<!-- ================= PASSWORD ================= -->
+<div>
+<label class="block font-semibold mb-2">
+Nouveau mot de passe
+</label>
+
+<input type="password"
+       name="password"
+       placeholder="Laisser vide pour ne pas changer"
+       class="w-full border rounded-lg p-3">
+
+{% if form.password.errors %}
+    <p class="text-red-500 text-sm mt-1">
+        {{ form.password.errors.0 }}
+    </p>
+{% endif %}
 </div>
+
+<!-- ================= ERREURS GLOBALES ================= -->
+{% if form.non_field_errors %}
+<div class="bg-red-100 text-red-700 p-3 rounded">
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+
+<!-- ================= ACTIONS ================= -->
+<div class="flex items-center gap-3 pt-2">
 
 <button type="submit"
-class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg transition">
 Enregistrer
 </button>
+
+<a href="{% url 'dashboard' %}"
+class="px-5 py-2 border rounded-lg hover:bg-gray-50">
+Annuler
+</a>
+
+</div>
 
 </form>
 

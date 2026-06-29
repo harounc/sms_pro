@@ -6,7 +6,7 @@ from . import views
 urlpatterns = [
 
     # Login
-    path("login/", login_view, name="login"),
+    path("login/", login_view, name="accounts_login"),
 
     # Accounts Dashboard
     path("dashboard/", views.accounts_dashboard_view, name="accounts_dashboard"),

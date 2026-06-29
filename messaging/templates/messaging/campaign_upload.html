@@ -3,412 +3,303 @@
 
 {% block content %}
 
+{% if error %}
+<div class="bg-red-100 text-red-800 p-3 mb-4 rounded">
+    {{ error }}
+</div>
+{% endif %}
+
+<div class="max-w-4xl mx-auto">
+
 <h2 class="text-3xl font-bold text-green-600 mb-6">
-Campagne SMS
+📢 Campagne SMS
 </h2>
 
 <a href="{% url 'download_model' %}"
-class="bg-gray-700 text-white px-4 py-2 rounded-lg mb-6 inline-block">
-Télécharger le modèle Excel
+class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg mb-6 inline-block">
+⬇ Télécharger le modèle Excel
 </a>
 
-
-<form method="POST" enctype="multipart/form-data" class="space-y-6">
+<form method="POST" enctype="multipart/form-data" class="space-y-6" id="campaignForm">
 {% csrf_token %}
 
+<!-- IMPORTANT -->
+<input type="hidden" name="submitted" value="1">
 
-<!-- NOM CAMPAGNE -->
+<div class="bg-white shadow-lg rounded-xl p-6 space-y-6">
+
+<!-- NOM -->
 <div>
-
-<label class="block font-semibold mb-2">
+<label class="block font-semibold text-gray-700 mb-2">
 Nom de la campagne <span class="text-red-500">*</span>
 </label>
 
 <input type="text"
-name="campaign_name"
+name="title"
+value="{{ request.POST.title }}"
 required
-class="w-full border rounded-lg p-3">
-
+placeholder="Ex: Promo clients"
+class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500">
 </div>
 
-
-<!-- EXPEDITEUR -->
+<!-- SENDER -->
 <div>
-
-<label class="block font-semibold mb-2">
+<label class="block font-semibold text-gray-700 mb-2">
 Expéditeur <span class="text-red-500">*</span>
 </label>
 
-<select name="sender"
-required
-class="w-full border rounded-lg p-3">
+<select name="sender" required
+class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500">
 
-<option value="">Sélectionnez un expéditeur</option>
+<option value="">Choisir un expéditeur</option>
 
 {% for sender in senders %}
-<option value="{{ sender.id }}">
+<option value="{{ sender.id }}"
+{% if request.POST.sender == sender.id|stringformat:"s" %}selected{% endif %}>
 {{ sender.name }}
 </option>
 {% endfor %}
 
 </select>
-
 </div>
 
-
-<!-- MODELE -->
+<!-- GROUPE -->
 <div>
-
-<label class="block font-semibold mb-2">
-Sélectionner un modèle
-</label>
-
-<select id="templateSelect"
-class="w-full border rounded-lg p-3">
-
-<option value="">Sélectionnez un modèle</option>
-
-{% for template in templates %}
-<option value="{{ template.message }}">
-{{ template.name }}
-</option>
-{% endfor %}
-
-</select>
-
-</div>
-
-
-<!-- GROUPE CONTACT (alternative) -->
-<div>
-
-<label class="block font-semibold mb-2">
+<label class="block font-semibold text-gray-700 mb-2">
 Groupe de contacts
 </label>
 
-<select name="contact_group"
-id="contactGroupSelect"
-class="w-full border rounded-lg p-3">
+<select name="contact_group" id="contactGroupSelect"
+class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500">
 
 <option value="">Choisir un groupe</option>
 
 {% for group in contact_groups %}
-<option value="{{ group.id }}">
+<option value="{{ group.id }}"
+{% if request.POST.contact_group == group.id|stringformat:"s" %}selected{% endif %}>
 {{ group.name }}
 </option>
 {% endfor %}
 
 </select>
 
+<p id="selectedGroupName" class="text-sm text-green-600 mt-2 hidden"></p>
 </div>
 
+<div class="text-center text-gray-400 font-semibold">OU</div>
 
-<div class="text-center text-gray-400 font-semibold">
-OU
-</div>
-
-
-<!-- IMPORT EXCEL -->
+<!-- EXCEL -->
 <div>
-
-<label class="block font-semibold mb-2">
-Importer un fichier Excel
+<label class="block font-semibold text-gray-700 mb-2">
+Importer fichier Excel
 </label>
 
-<div class="flex items-center gap-3">
-
-<input type="file"
-name="file"
-id="campaignFile"
+<input type="file" name="file" id="campaignFile"
 class="w-full border rounded-lg p-3">
-
-<button type="button"
-id="removeExcelFile"
-class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg hidden">
-Supprimer
-</button>
-
 </div>
 
-</div>
-
-
-<!-- RESUME FICHIER -->
+<!-- SUMMARY -->
 <div id="excelSummary"
-class="hidden bg-gray-100 p-4 rounded-lg text-sm">
+class="hidden bg-gray-100 border-l-4 border-green-500 p-4 rounded-lg text-sm">
 
-<p><strong>Fichier :</strong> <span id="excelFileName"></span></p>
-
-<p><strong>Nombre de lignes :</strong>
-<span id="excelTotalRows">0</span></p>
-
-<p class="text-green-600">
-<strong>Numéros valides :</strong>
-<span id="excelValidNumbers">0</span>
-</p>
-
-<p class="text-red-600">
-<strong>Numéros invalides :</strong>
-<span id="excelInvalidNumbers">0</span>
-</p>
+<p><strong>Source :</strong> <span id="excelFileName"></span></p>
+<p>Total : <span id="excelTotalRows">0</span></p>
+<p class="text-green-600">✔ Valides : <span id="excelValidNumbers">0</span></p>
+<p class="text-red-600">✖ Invalides : <span id="excelInvalidNumbers">0</span></p>
 
 </div>
-
 
 <!-- MESSAGE -->
 <div>
-
-<label class="block font-semibold mb-2">
+<label class="block font-semibold text-gray-700 mb-2">
 Message <span class="text-red-500">*</span>
 </label>
 
 <textarea name="message"
 id="campaignMessage"
 required
-class="w-full border rounded-lg p-3"></textarea>
-
+placeholder="Votre message..."
+class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500">{{ request.POST.message }}</textarea>
 </div>
-
 
 <!-- STATS -->
-<div class="bg-gray-100 p-4 rounded-lg">
+<div class="bg-gray-50 border rounded-lg p-4">
 
-<p>
-Caractères :
-<span id="campaignCharCount">0</span>
+<h4 class="font-semibold text-gray-700 mb-3">
+📊 Statistiques
+</h4>
+
+<div class="grid grid-cols-2 gap-4 text-sm">
+
+<p>Caractères : <span id="charCount">0</span></p>
+<p>SMS / destinataire : <span id="smsCount">0</span></p>
+<p>Destinataires valides : <span id="validNumbers">0</span></p>
+
+<p class="font-bold text-green-600 col-span-2 text-lg">
+💰 Coût estimé : <span id="cost">0</span> FCFA
 </p>
-
-<p>
-SMS par destinataire :
-<span id="campaignSmsCount">0</span>
-</p>
-
-<p>
-Nombre de numéros valides :
-<span id="campaignValidNumbers">0</span>
-</p>
-
-<p id="campaignEstimatedCostWrapper"
-class="font-bold text-green-600">
-
-Coût estimé :
-<span id="campaignEstimatedCost">0</span> fcfa
-
-</p>
-
-</div>
-
-
-<!-- ENREGISTRER COMME MODELE -->
-<div>
-
-<label class="block font-semibold mb-2">
-Enregistrer comme modèle
-</label>
-
-<div class="flex gap-6">
-
-<label class="flex items-center gap-2">
-<input type="radio" name="save_template" value="no" checked>
-Non
-</label>
-
-<label class="flex items-center gap-2">
-<input type="radio" name="save_template" value="yes">
-Oui
-</label>
 
 </div>
 
 </div>
 
+<!-- ACTIONS -->
+<div class="flex gap-4">
 
-<button type="submit"
-class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
-
-Envoyer la campagne
-
+<button type="submit" id="sendCampaignBtn"
+class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">
+🚀 Envoyer maintenant
 </button>
+
+<button type="button" id="scheduleBtn"
+class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold">
+⏱ Programmer
+</button>
+
+</div>
+
+<input type="datetime-local" name="scheduled_at" id="scheduleInput"
+value="{{ request.POST.scheduled_at }}"
+class="{% if request.POST.scheduled_at %}{% else %}hidden {% endif %}w-full border rounded-lg p-3 mt-4">
+
+</div>
 
 </form>
 
+</div>
 
+
+
+
+
+
+
+<!-- XLSX -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
 
 <script>
 
 const SMS_PRICE = 19
+let validRecipients = 0
 
-let validRecipientsCount = 0
+const msg = document.getElementById("campaignMessage")
+const fileInput = document.getElementById("campaignFile")
+const groupSelect = document.getElementById("contactGroupSelect")
+const campaignForm = document.getElementById("campaignForm")
+const sendCampaignBtn = document.getElementById("sendCampaignBtn")
+const scheduleBtn = document.getElementById("scheduleBtn")
+const scheduleInput = document.getElementById("scheduleInput")
 
-const campaignFile = document.getElementById("campaignFile")
-const removeExcelFile = document.getElementById("removeExcelFile")
+const selectedGroupName = document.getElementById("selectedGroupName")
 
-const excelSummary = document.getElementById("excelSummary")
-const excelFileName = document.getElementById("excelFileName")
-const excelTotalRows = document.getElementById("excelTotalRows")
-const excelValidNumbers = document.getElementById("excelValidNumbers")
-const excelInvalidNumbers = document.getElementById("excelInvalidNumbers")
-
-const messageInput = document.getElementById("campaignMessage")
-const templateSelect = document.getElementById("templateSelect")
-
-const charCount = document.getElementById("campaignCharCount")
-const smsCount = document.getElementById("campaignSmsCount")
-const validNumbersDisplay = document.getElementById("campaignValidNumbers")
-const estimatedCost = document.getElementById("campaignEstimatedCost")
+const charCount = document.getElementById("charCount")
+const smsCount = document.getElementById("smsCount")
+const validNumbers = document.getElementById("validNumbers")
+const cost = document.getElementById("cost")
 
 const phoneRegex = /^\+225\d{10}$/
 
+/* ===== CALCUL ===== */
+function calc(){
+const len = msg.value.length
+charCount.innerText = len
 
-function calculateStats(){
+const parts = Math.ceil(len / 160) || 0
+smsCount.innerText = parts
 
-const messageLength = messageInput.value.length
-
-charCount.innerText = messageLength
-
-const smsParts = Math.ceil(messageLength / 160) || 0
-
-smsCount.innerText = smsParts
-
-validNumbersDisplay.innerText = validRecipientsCount
-
-const totalCost = validRecipientsCount * smsParts * SMS_PRICE
-
-estimatedCost.innerText = totalCost.toFixed(0)
-
+validNumbers.innerText = validRecipients
+cost.innerText = (validRecipients * parts * SMS_PRICE).toFixed(0)
 }
 
+msg.addEventListener("input", calc)
 
-messageInput.addEventListener("input", calculateStats)
+/* ===== EXCEL ===== */
+fileInput.addEventListener("change", async function(){
 
-
-
-/* AUTO REMPLISSAGE MODELE */
-
-templateSelect.addEventListener("change", function(){
-
-const message = this.value
-
-if(message){
-
-messageInput.value = message
-
-calculateStats()
-
-}
-
-})
-
-
-
-campaignFile.addEventListener("change", async function(){
+groupSelect.value = ""
+selectedGroupName.classList.add("hidden")
 
 const file = this.files[0]
-
 if(!file) return
 
-removeExcelFile.classList.remove("hidden")
-
-excelFileName.innerText = file.name
+if(!window.XLSX){
+alert("Prévisualisation Excel indisponible. Le fichier sera validé à l'envoi.")
+return
+}
 
 const data = await file.arrayBuffer()
-
-const workbook = XLSX.read(data)
-
-const sheet = workbook.Sheets[workbook.SheetNames[0]]
-
+const wb = XLSX.read(data)
+const sheet = wb.Sheets[wb.SheetNames[0]]
 const rows = XLSX.utils.sheet_to_json(sheet)
 
 let valid = 0
 let invalid = 0
 
-rows.forEach(row => {
-
-let phone = Object.values(row)[0]
-
-if(phoneRegex.test(String(phone).trim()))
-valid++
-else
-invalid++
-
+rows.forEach(r => {
+const phone = String(Object.values(r)[0]).trim()
+if(phoneRegex.test(phone)) valid++
+else invalid++
 })
 
-validRecipientsCount = valid
+validRecipients = valid
 
-excelTotalRows.innerText = rows.length
-excelValidNumbers.innerText = valid
-excelInvalidNumbers.innerText = invalid
+document.getElementById("excelSummary").classList.remove("hidden")
+document.getElementById("excelFileName").innerText = file.name
+document.getElementById("excelTotalRows").innerText = rows.length
+document.getElementById("excelValidNumbers").innerText = valid
+document.getElementById("excelInvalidNumbers").innerText = invalid
 
-excelSummary.classList.remove("hidden")
-
-calculateStats()
-
+calc()
 })
 
+/* ===== GROUPE ===== */
+groupSelect.addEventListener("change", function(){
 
-removeExcelFile.addEventListener("click", function(){
+fileInput.value = ""
 
-campaignFile.value = ""
+const selectedText = this.options[this.selectedIndex].text
 
-excelSummary.classList.add("hidden")
-
-removeExcelFile.classList.add("hidden")
-
-validRecipientsCount = 0
-
-calculateStats()
-
-})
-
-</script>
-
-
-<script>
-
-const contactGroupSelect = document.getElementById("contactGroupSelect")
-
-if(contactGroupSelect){
-
-contactGroupSelect.addEventListener("change", function(){
-
-const groupId = this.value
-
-if(!groupId){
+if(!this.value){
+validRecipients = 0
+selectedGroupName.classList.add("hidden")
+calc()
 return
 }
 
-fetch(`/contacts/groups-stats/?group_id=${groupId}`)
+selectedGroupName.innerText = "📂 Groupe sélectionné : " + selectedText
+selectedGroupName.classList.remove("hidden")
 
-.then(response => response.json())
-
+fetch(`{% url 'contact_group_stats' %}?group_id=${this.value}`)
+.then(r => r.json())
 .then(data => {
 
-excelSummary.classList.remove("hidden")
+validRecipients = data.valid
 
-excelFileName.innerText = "Groupe de contacts"
+document.getElementById("excelSummary").classList.remove("hidden")
+document.getElementById("excelFileName").innerText = selectedText
+document.getElementById("excelTotalRows").innerText = data.total
+document.getElementById("excelValidNumbers").innerText = data.valid
+document.getElementById("excelInvalidNumbers").innerText = data.invalid
 
-excelTotalRows.innerText = data.total
-
-excelValidNumbers.innerText = data.valid
-
-excelInvalidNumbers.innerText = data.invalid
-
-validRecipientsCount = data.valid
-
-calculateStats()
+calc()
 
 })
 
-.catch(error => console.log(error))
-
 })
 
-}
+/* ===== PROGRAMMATION ===== */
+scheduleBtn.addEventListener("click", function(){
+scheduleInput.classList.toggle("hidden")
+})
+
+campaignForm.addEventListener("submit", function(){
+sendCampaignBtn.disabled = true
+scheduleBtn.disabled = true
+sendCampaignBtn.innerText = "Traitement en cours..."
+})
+
+calc()
 
 </script>
-
-
 
 {% endblock %}

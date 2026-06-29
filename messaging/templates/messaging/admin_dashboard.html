@@ -7,45 +7,54 @@
     Dashboard Global (Admin)
 </h2>
 
-<div class="grid grid-cols-3 gap-6 mb-10">
+<!-- ===================== STATS ===================== -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
 
     <div class="bg-white shadow rounded-lg p-6 text-center">
         <p class="text-gray-500">Total SMS envoyés</p>
         <p class="text-2xl font-bold text-green-600">
-            {{ total_sms }}
+            {{ total_sms|default:0 }}
         </p>
     </div>
 
     <div class="bg-white shadow rounded-lg p-6 text-center">
         <p class="text-gray-500">Revenu total</p>
         <p class="text-2xl font-bold text-blue-600">
-            {{ total_revenue|floatformat:2 }} crédits
+            {{ total_revenue|default:0|floatformat:2 }} crédits
         </p>
     </div>
 
     <div class="bg-white shadow rounded-lg p-6 text-center">
         <p class="text-gray-500">Entreprises actives</p>
         <p class="text-2xl font-bold text-orange-500">
-            {{ total_companies }}
+            {{ total_companies|default:0 }}
         </p>
     </div>
 
 </div>
 
-<!-- Graphique global -->
+<!-- ===================== GRAPH ===================== -->
 <div class="bg-white p-6 rounded-lg shadow mb-10">
     <h3 class="text-xl font-bold mb-4">
         SMS envoyés (7 derniers jours - Global)
     </h3>
+
     <canvas id="globalChart"></canvas>
+
+    {% if not daily_data %}
+        <p class="text-gray-400 mt-4 text-center">
+            Aucune donnée disponible
+        </p>
+    {% endif %}
 </div>
 
-<!-- Top entreprises -->
+<!-- ===================== TOP ENTREPRISES ===================== -->
 <div class="bg-white p-6 rounded-lg shadow">
     <h3 class="text-xl font-bold mb-4">
         Top 5 Entreprises
     </h3>
 
+    {% if top_companies %}
     <table class="w-full table-auto border-collapse">
         <thead>
             <tr class="bg-gray-100">
@@ -55,45 +64,58 @@
         </thead>
         <tbody>
             {% for company in top_companies %}
-            <tr class="border-b">
-                <td class="p-3">{{ company.name }}</td>
-                <td class="p-3">{{ company.sms_count }}</td>
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-3 font-medium">{{ company.name }}</td>
+                <td class="p-3">{{ company.sms_count|default:0 }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    {% else %}
+        <p class="text-gray-400 text-center">
+            Aucune entreprise disponible
+        </p>
+    {% endif %}
 </div>
 
+<!-- ===================== CHART JS ===================== -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const dailyData = {{ daily_data|safe }};
+try {
+    const dailyData = {{ daily_data|default:"[]"|safe }};
 
-const labels = dailyData.map(item => item.date);
-const data = dailyData.map(item => item.count);
+    if (dailyData.length > 0) {
 
-const ctx = document.getElementById('globalChart').getContext('2d');
+        const labels = dailyData.map(item => item.date);
+        const data = dailyData.map(item => item.count);
 
-new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: labels,
-        datasets: [{
-            label: 'SMS envoyés',
-            data: data,
-            borderColor: '#f97316',
-            backgroundColor: 'rgba(249, 115, 22, 0.2)',
-            tension: 0.3,
-            fill: true
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false }
-        }
+        const ctx = document.getElementById('globalChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'SMS envoyés',
+                    data: data,
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.2)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
     }
-});
+} catch (error) {
+    console.error("Erreur graphique :", error);
+}
 </script>
 
 {% endblock %}

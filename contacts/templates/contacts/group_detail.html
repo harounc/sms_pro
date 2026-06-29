@@ -4,89 +4,57 @@
 
 <div class="max-w-7xl mx-auto">
 
-<!-- Titre -->
-
+<!-- ================= HEADER ================= -->
 <div class="flex justify-between items-center mb-6 bg-orange-500 text-white px-6 py-4 rounded-lg shadow">
 
-    <h2 class="text-xl font-semibold text-white">
+    <h2 class="text-xl font-semibold">
         Contacts du groupe : {{ group.name }}
     </h2>
 
     <p class="text-sm text-orange-100">
-        Total : {{ contacts|length }} contacts
+        Total : {{ contacts.paginator.count }}
     </p>
 
-<a href="{% url 'contact_groups_list' %}"
-class="bg-white text-orange-600 hover:bg-gray-100 px-4 py-2 rounded font-medium">
-
-Retour
-</a>
+    <a href="{% url 'contact_groups_list' %}"
+       class="bg-white text-orange-600 hover:bg-gray-100 px-4 py-2 rounded font-medium">
+        Retour
+    </a>
 
 </div>
 
 
-<!-- MESSAGE FLASH -->
-{% if messages %}
-    {% for message in messages %}
-        <div class="mb-4 p-4 bg-{{ message.tags }}-100 border border-{{ message.tags }}-300 text-{{ message.tags }}-700 rounded">
-            {{ message }}
-        </div>
-    {% endfor %}
-{% endif %}
-
-
-
-
-<!-- INFO -->
-
+<!-- ================= INFO ================= -->
 <div class="bg-gray-100 border border-gray-300 text-gray-700 p-4 rounded mb-6">
-
-Ajouter directement un contact ou importer des contacts à partir d'un fichier Excel.
-
+    Ajouter un contact ou importer un fichier Excel.
 </div>
-
 
 
 <div class="grid grid-cols-3 gap-6">
 
-<!-- FORMULAIRE CONTACT -->
-
+<!-- ================= FORM ================= -->
 <div class="col-span-1 bg-white shadow rounded-lg p-6 border border-gray-200">
 
 <h3 class="text-lg font-semibold mb-4 text-gray-800">
-Ajouter un contact
+    Ajouter un contact
 </h3>
 
 <form method="POST" action="{% url 'contact_create' group.id %}">
-
 {% csrf_token %}
 
 <label class="block text-sm mb-1 text-gray-600">Téléphone</label>
-
-<input type="text"
-name="phone"
-placeholder="2250700000000"
-class="w-full border border-gray-300 rounded p-2 mb-4 focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
-
+<input type="text" name="phone" placeholder="+2250700000000"
+       class="w-full border rounded p-2 mb-4">
 
 <label class="block text-sm mb-1 text-gray-600">Nom</label>
-
-<input type="text"
-name="name"
-placeholder="John Doe"
-class="w-full border border-gray-300 rounded p-2 mb-4 focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
-
+<input type="text" name="name" placeholder="John Doe"
+       class="w-full border rounded p-2 mb-4">
 
 <label class="block text-sm mb-1 text-gray-600">Email</label>
-
-<input type="email"
-name="email"
-placeholder="john@email.com"
-class="w-full border border-gray-300 rounded p-2 mb-4 focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
-
+<input type="email" name="email" placeholder="john@email.com"
+       class="w-full border rounded p-2 mb-4">
 
 <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded">
-Enregistrer
+    Enregistrer
 </button>
 
 </form>
@@ -94,57 +62,52 @@ Enregistrer
 </div>
 
 
-
-<!-- TABLE CONTACTS -->
-
+<!-- ================= TABLE ================= -->
 <div class="col-span-2 bg-white shadow rounded-lg p-6 border border-gray-200">
 
 <div class="flex justify-between items-center mb-4">
 
 <h3 class="text-lg font-semibold text-gray-800">
-Contacts
+    Contacts
 </h3>
 
 <a href="{% url 'contacts_import_excel' group.id %}"
-class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">
-Importer Excel
+   class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">
+    Importer Excel
 </a>
 
 </div>
 
 
+<!-- ================= RECHERCHE ================= -->
+<form method="GET" class="flex gap-2 mb-4">
 
-<!-- RECHERCHE CONTACTS -->
-<div class="flex justify-between items-center mb-4"> 
+    <input type="text"
+           name="q"
+           value="{{ search }}"
+           placeholder="Rechercher..."
+           class="border border-gray-300 rounded px-3 py-2 w-full">
 
-    <input
-        type="text"
-        placeholder="Rechercher un contact..."
-        class="border border-gray-300 rounded px-3 py-2 w-64 focus:ring-2 focus:ring-orange-400">
-    <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">
+    <button class="bg-orange-500 text-white px-4 py-2 rounded">
         Rechercher
     </button>
 
-</div>
+</form>
+
 
 <div class="overflow-x-auto">
 
 <table class="w-full border border-gray-200">
 
 <thead class="bg-gray-100">
-
 <tr>
-
-<th class="p-3 text-left text-gray-700">#</th>
-<th class="p-3 text-left text-gray-700">Téléphone</th>
-<th class="p-3 text-left text-gray-700">Nom</th>
-<th class="p-3 text-left text-gray-700">Email</th>
-<th class="p-3 text-left text-gray-700">Action</th>
-
+<th class="p-3">#</th>
+<th class="p-3">Téléphone</th>
+<th class="p-3">Nom</th>
+<th class="p-3">Email</th>
+<th class="p-3">Action</th>
 </tr>
-
 </thead>
-
 
 <tbody>
 
@@ -153,10 +116,10 @@ Importer Excel
 <tr class="border-t hover:bg-gray-50">
 
 <td class="p-3">
-{{ forloop.counter }}
+{{ forloop.counter0|add:contacts.start_index }}
 </td>
 
-<td class="p-3 font-medium text-gray-800">
+<td class="p-3 font-medium">
 {{ contact.phone }}
 </td>
 
@@ -168,17 +131,22 @@ Importer Excel
 {{ contact.email|default:"-" }}
 </td>
 
-<td class="p-3 flex gap-3">
+<td class="p-3 flex gap-2">
 
 <a href="{% url 'contact_edit' contact.id %}"
-    class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-sm">
+   class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-sm">
     Modifier
 </a>
 
-<a href="{% url 'contact_delete' contact.id %}"
-class="bg-gray-100 hover:bg-red-200 px-3 py-1 rounded text-sm text-red-600">
-Supprimer
-</a>
+<form method="POST"
+      action="{% url 'contact_delete' contact.id %}"
+      onsubmit="return confirm('Supprimer ce contact ?');">
+{% csrf_token %}
+<button type="submit"
+   class="bg-red-100 hover:bg-red-200 px-3 py-1 rounded text-sm text-red-600">
+    Supprimer
+</button>
+</form>
 
 </td>
 
@@ -187,11 +155,9 @@ Supprimer
 {% empty %}
 
 <tr>
-
-<td colspan="5" class="p-4 text-gray-500 text-center">
-Aucun contact dans ce groupe
+<td colspan="5" class="p-4 text-center text-gray-500">
+    Aucun contact trouvé
 </td>
-
 </tr>
 
 {% endfor %}
@@ -202,8 +168,31 @@ Aucun contact dans ce groupe
 
 </div>
 
+
+<!-- ================= PAGINATION ================= -->
+<div class="flex justify-center items-center mt-6 gap-2">
+
+{% if contacts.has_previous %}
+    <a href="?page={{ contacts.previous_page_number }}&q={{ search }}"
+       class="px-3 py-1 bg-gray-200 rounded">
+        ← Précédent
+    </a>
+{% endif %}
+
+<span class="px-3 py-1">
+    Page {{ contacts.number }} / {{ contacts.paginator.num_pages }}
+</span>
+
+{% if contacts.has_next %}
+    <a href="?page={{ contacts.next_page_number }}&q={{ search }}"
+       class="px-3 py-1 bg-gray-200 rounded">
+        Suivant →
+    </a>
+{% endif %}
+
 </div>
 
+</div>
 
 </div>
 

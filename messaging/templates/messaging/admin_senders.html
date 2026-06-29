@@ -2,14 +2,20 @@
 
 {% block content %}
 
-<table class="w-full border">
+<h2 class="text-2xl font-bold mb-6 text-orange-600">
+    Validation des expéditeurs (Admin plateforme)
+</h2>
 
-<thead>
+<div class="bg-white shadow rounded-xl overflow-hidden">
+
+<table class="w-full text-sm">
+
+<thead class="bg-gray-100">
 <tr>
-<th>Sender</th>
-<th>Entreprise</th>
-<th>Status</th>
-<th>Action</th>
+<th class="p-3 text-left">Nom</th>
+<th class="p-3 text-left">Entreprise</th>
+<th class="p-3 text-left">Statut</th>
+<th class="p-3 text-left">Action</th>
 </tr>
 </thead>
 
@@ -17,30 +23,64 @@
 
 {% for sender in senders %}
 
-<tr>
+<tr class="border-t hover:bg-gray-50 transition">
 
-<td>{{ sender.name }}</td>
+<td class="p-3 font-semibold text-gray-800">
+    {{ sender.name }}
+</td>
 
-<td>{{ sender.company.name }}</td>
+<td class="p-3 text-gray-600">
+    {{ sender.company.name|default:"-" }}
+</td>
 
-<td>{{ sender.status }}</td>
+<!-- STATUS -->
+<td class="p-3">
+    {% if sender.status == "approved" %}
+        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+            ✔ Approuvé
+        </span>
 
-<td>
+    {% elif sender.status == "rejected" %}
+        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-semibold">
+            ✖ Refusé
+        </span>
 
-{% if sender.status == "pending" and not request.user.company %}
+    {% else %}
+        <span class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-semibold">
+            ⏳ En attente
+        </span>
+    {% endif %}
+</td>
 
-<a href="{% url 'approve_sender' sender.id %}" class="text-green-600">
-Approuver
-</a>
+<!-- ACTION -->
+<td class="p-3">
 
-<a href="{% url 'reject_sender' sender.id %}" class="text-red-600 ml-3">
-Refuser
-</a>
+{% if sender.status == "pending" %}
 
+    <a href="{% url 'approve_sender' sender.id %}"
+       class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs transition">
+        Approuver
+    </a>
+
+    <a href="{% url 'reject_sender' sender.id %}"
+       class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs ml-2 transition">
+        Refuser
+    </a>
+
+{% else %}
+    <span class="text-gray-400">Déjà traité</span>
 {% endif %}
 
 </td>
 
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="4" class="text-center p-6 text-gray-400">
+    Aucun expéditeur à valider
+</td>
 </tr>
 
 {% endfor %}
@@ -48,4 +88,7 @@ Refuser
 </tbody>
 
 </table>
+
+</div>
+
 {% endblock %}

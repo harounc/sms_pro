@@ -1,40 +1,15 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from accounts.models import User, Company
-from .managers import CompanyManager
+from django.core.exceptions import ValidationError
 
+from accounts.models import Company
 
-
-# ==============================
-# CONTACT
-# ==============================
-
-class Contact(models.Model):
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
-
-    name = models.CharField(max_length=150)
-    phone = models.CharField(max_length=20)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = CompanyManager()
-
-    class Meta:
-        unique_together = ('company', 'phone')
-        indexes = [
-            models.Index(fields=['company', 'phone']),
-        ]
-
-    def __str__(self):
-        return f"{self.name} - {self.phone}"
+User = get_user_model()
 
 
 # ==============================
 # CAMPAIGN
 # ==============================
-
 class Campaign(models.Model):
 
     STATUS_CHOICES = (
@@ -66,22 +41,23 @@ class Campaign(models.Model):
 
     is_active = models.BooleanField(default=True)
 
-    objects = CompanyManager()
-
     class Meta:
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['company', 'status']),
-            # models.Index(fields=['created_at']), # ch
         ]
+
+    def clean(self):
+        if self.user.company != self.company:
+            raise ValidationError("Utilisateur et entreprise incohérents")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} - {self.company.name}"
 
-
-# ==============================
-# MESSAGE
-# ==============================
 
 class Message(models.Model):
 
@@ -108,6 +84,8 @@ class Message(models.Model):
         related_name='messages'
     )
 
+    title = models.CharField(max_length=255)
+
     phone = models.CharField(max_length=20)
     message = models.TextField()
 
@@ -120,8 +98,6 @@ class Message(models.Model):
     sent_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    objects = CompanyManager()
 
     class Meta:
         ordering = ['-created_at']
@@ -129,34 +105,43 @@ class Message(models.Model):
             models.Index(fields=['company', 'status']),
             models.Index(fields=['sent_at']),
             models.Index(fields=['scheduled_at']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['message_type']),
+            models.Index(fields=['title']),
         ]
 
+    def clean(self):
+
+        if self.user.company != self.company:
+            raise ValidationError("Utilisateur et entreprise incohérents")
+
+        if self.campaign and self.campaign.company != self.company:
+            raise ValidationError("Campagne invalide pour cette entreprise")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.phone} - {self.status}"
+        return f"{self.title} | {self.phone} | {self.status}"
 
-# ===========================
-# EXPEDITEUR _ Sender
-# ===========================
-
-User = get_user_model()
-
+# ==============================
+# SENDER
+# ==============================
 class Sender(models.Model):
 
-    company = models.ForeignKey(
-        Company,
-        on_delete=models.CASCADE,
-    )
+    STATUS_CHOICES = [
+        ('pending', 'En attente'),
+        ('approved', 'Approuvé'),
+        ('rejected', 'Refusé'),
+    ]
 
-    name = models.CharField(max_length=15, unique=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+
+    name = models.CharField(max_length=15)
 
     status = models.CharField(
         max_length=20,
-        choices=[
-            ('pending', 'En attente'),
-            ('approved', 'Approuvé'),
-            ('rejected', 'Refusé'),
-        ],
+        choices=STATUS_CHOICES,
         default='pending'
     )
 
@@ -178,6 +163,23 @@ class Sender(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "name"],
+                name="unique_sender_per_company"
+            )
+        ]
+
+    def clean(self):
+        if self.created_by and self.created_by.company != self.company:
+            raise ValidationError("Créateur invalide")
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.upper()
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

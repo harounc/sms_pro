@@ -2,22 +2,54 @@
 
 {% block content %}
 
-<h2 class="text-xl font-bold mb-4">
+<h2 class="text-2xl font-bold mb-6">
     Recharge - {{ company.name }}
 </h2>
 
-<form method="post" class="bg-white p-6 rounded shadow max-w-md">
-    {% csrf_token %}
-
-    <div class="mb-4">
-        {{ form.amount.label_tag }}
-        {{ form.amount }}
+<!-- INFOS -->
+<div class="mb-4 text-gray-700">
+    <div>
+        Solde entreprise :
+        <strong>{{ company.balance }}</strong> crédits
     </div>
+</div>
 
-    <button type="submit"
-            class="bg-green-600 text-white px-4 py-2 rounded">
-        Recharger
-    </button>
-</form>
+<!-- CARD -->
+<div class="bg-white p-6 rounded-lg shadow max-w-md">
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- MONTANT -->
+        <div class="mb-4">
+
+            <label class="block font-semibold mb-2">
+                Montant:
+            </label>
+
+            <input type="number"
+                   name="amount"
+                   step="0.01"
+                   min="1"
+                   placeholder="Ex: 1000"
+                   class="w-full border rounded-lg p-3">
+
+            {% if form.amount.errors %}
+                <p class="text-red-500 text-sm mt-1">
+                    {{ form.amount.errors.0 }}
+                </p>
+            {% endif %}
+
+        </div>
+
+        <!-- BUTTON -->
+        <button type="submit"
+                class="bg-green-600 text-white px-5 py-2 rounded-lg">
+            Recharger
+        </button>
+
+    </form>
+
+</div>
 
 {% endblock %}
