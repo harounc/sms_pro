@@ -3,7 +3,7 @@ from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
 from accounts.models import Company, User
 from contacts.models import Contact, ContactGroup
@@ -67,6 +67,15 @@ class ContactImportTests(TestCase):
         self.assertContains(response, "Importé")
         self.assertContains(response, "Doublon")
         self.assertContains(response, "Invalide")
+
+    def test_download_contacts_model_excel(self):
+        response = self.client.get(reverse("contacts_download_model", args=[self.group.id]))
+        workbook = load_workbook(BytesIO(response.content))
+        sheet = workbook.active
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("modele_import_contacts.xlsx", response["Content-Disposition"])
+        self.assertEqual([sheet.cell(1, col).value for col in range(1, 4)], ["phone", "name", "email"])
 
     def test_contact_create_rejects_invalid_phone(self):
         response = self.client.post(

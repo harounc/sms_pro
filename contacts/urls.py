@@ -23,6 +23,7 @@ urlpatterns = [
 
     # importer contact
     path("group/<int:group_id>/import-excel/", contacts_import_excel, name="contacts_import_excel"),
+    path("group/<int:group_id>/model-excel/", contacts_download_model_excel, name="contacts_download_model"),
 
     # ✅ modifier contact
     path("contacts/<int:contact_id>/edit/", contact_edit, name="contact_edit"),

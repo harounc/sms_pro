@@ -1,3 +1,5 @@
+from io import BytesIO
+
 import openpyxl
 import re
 import logging
@@ -5,8 +7,10 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.exceptions import ValidationError
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
 
 from .models import ContactGroup, Contact
 
@@ -453,6 +457,54 @@ def contacts_import_excel(request, group_id):
         "results": results,
         "rows_data": rows_data
     })
+
+
+@login_required
+def contacts_download_model_excel(request, group_id):
+    group = get_object_or_404(
+        ContactGroup,
+        id=group_id,
+        company=request.user.company
+    )
+
+    if not can_access_group(request.user, group):
+        return render(request, "messaging/forbidden.html")
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Contacts"
+
+    headers = ["phone", "name", "email"]
+    examples = [
+        ["+2250777186049", "CH", "contact@example.com"],
+        ["+2250768944994", "Harouna COULIBALY", "harouna@example.com"],
+    ]
+
+    sheet.append(headers)
+    for row in examples:
+        sheet.append(row)
+
+    header_fill = PatternFill("solid", fgColor="009846")
+    for cell in sheet[1]:
+        cell.font = Font(color="FFFFFF", bold=True)
+        cell.fill = header_fill
+
+    sheet.column_dimensions["A"].width = 22
+    sheet.column_dimensions["B"].width = 28
+    sheet.column_dimensions["C"].width = 34
+    sheet.freeze_panes = "A2"
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="modele_import_contacts.xlsx"'
+
+    return response
 
 
 

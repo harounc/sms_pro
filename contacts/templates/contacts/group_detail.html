@@ -71,10 +71,16 @@
     Contacts
 </h3>
 
-<a href="{% url 'contacts_import_excel' group.id %}"
-   class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">
-    Importer Excel
-</a>
+<div class="flex gap-2">
+    <a href="{% url 'contacts_download_model' group.id %}"
+       class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded">
+        Modèle Excel
+    </a>
+    <a href="{% url 'contacts_import_excel' group.id %}"
+       class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">
+        Importer Excel
+    </a>
+</div>
 
 </div>
 

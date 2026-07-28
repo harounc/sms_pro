@@ -1,16 +1,19 @@
 import re
 import csv
 import json
-import os
 import logging
 import pandas as pd
 
+from io import BytesIO
 from datetime import timedelta
 from decimal import Decimal
 
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import FileResponse, HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils.dateparse import parse_datetime
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -1070,12 +1073,40 @@ def reject_sender(request, sender_id):
 
 def download_model_excel(request):
 
-    file_path = os.path.join("media", "modele_import_sms.xlsx")
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Campagne SMS"
 
-    if not os.path.exists(file_path):
-        return HttpResponse("Fichier introuvable", status=404)
+    headers = ["phone", "name"]
+    examples = [
+        ["+2250777186049", "CH"],
+        ["+2250768944994", "Harouna COULIBALY"],
+    ]
 
-    return FileResponse(open(file_path, 'rb'), as_attachment=True)
+    sheet.append(headers)
+    for row in examples:
+        sheet.append(row)
+
+    header_fill = PatternFill("solid", fgColor="009846")
+    for cell in sheet[1]:
+        cell.font = Font(color="FFFFFF", bold=True)
+        cell.fill = header_fill
+
+    sheet.column_dimensions["A"].width = 22
+    sheet.column_dimensions["B"].width = 28
+    sheet.freeze_panes = "A2"
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="modele_import_campagne_sms.xlsx"'
+
+    return response
 
 
 
