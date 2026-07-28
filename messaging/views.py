@@ -222,8 +222,13 @@ def send_sms_view(request):
         title = request.POST.get("title")
         name = request.POST.get("name", "")
         scheduled_input = request.POST.get("scheduled_at")
+        send_action = request.POST.get("send_action", "").strip()
+        wants_schedule = send_action == "schedule" or (not send_action and bool(scheduled_input))
         moteur_input = request.POST.get("moteur") or None  # None = auto-routing API
         sender_id = request.POST.get("sender")
+
+        if not wants_schedule:
+            scheduled_input = ""
 
         # ===============================
         # ❌ VALIDATION
@@ -267,6 +272,13 @@ def send_sms_view(request):
         # ===============================
         # 🕐 PLANIFICATION
         # ===============================
+        if wants_schedule and not scheduled_input:
+            return render(request, "messaging/send_sms.html", {
+                "contact_groups": contact_groups,
+                "senders": senders,
+                "error": "Veuillez choisir une date de programmation."
+            })
+
         scheduled_at, scheduled_error = parse_scheduled_datetime(scheduled_input)
         if scheduled_error:
             return render(request, "messaging/send_sms.html", {
@@ -390,6 +402,10 @@ def campaign_upload_view(request):
         sender_id = request.POST.get("sender")
 
         scheduled_at_str = request.POST.get("scheduled_at")
+        send_action = request.POST.get("send_action", "").strip()
+        wants_schedule = send_action == "schedule" or (not send_action and bool(scheduled_at_str))
+        if not wants_schedule:
+            scheduled_at_str = ""
         scheduled_at, scheduled_error = parse_scheduled_datetime(scheduled_at_str)
 
         # ===============================
@@ -406,6 +422,9 @@ def campaign_upload_view(request):
 
         if file and group_id:
             return render_campaign_error("Veuillez choisir soit un fichier Excel, soit un groupe, pas les deux.")
+
+        if wants_schedule and not scheduled_at_str:
+            return render_campaign_error("Veuillez choisir une date de programmation.")
 
         if scheduled_error:
             return render_campaign_error(scheduled_error)

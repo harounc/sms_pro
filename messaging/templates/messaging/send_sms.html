@@ -18,6 +18,7 @@
 
 <form method="POST" class="space-y-6" id="smsForm">
 {% csrf_token %}
+<input type="hidden" name="send_action" id="sendAction" value="{% if request.POST.send_action %}{{ request.POST.send_action }}{% else %}send_now{% endif %}">
 
 <!-- CARD -->
 <div class="bg-white shadow-lg rounded-xl p-6 space-y-6">
@@ -194,6 +195,7 @@ const scheduleBtn = document.getElementById("scheduleBtn")
 const sendNowBtn = document.getElementById("sendNowBtn")
 const scheduleInput = document.getElementById("scheduleInput")
 const submitBtn = document.getElementById("submitBtn")
+const sendAction = document.getElementById("sendAction")
 
 const AVAILABLE_BALANCE = Number(
 document.getElementById("availableBalance").dataset.balance || 0
@@ -252,20 +254,45 @@ calculate()
 sendNowBtn.addEventListener("click", () => {
 if(isSubmitting) return
 isScheduled = false
+sendAction.value = "send_now"
+scheduleInput.value = ""
 scheduleInput.classList.add("hidden")
 submitBtn.click()
 })
 
 scheduleBtn.addEventListener("click", () => {
+if(isSubmitting) return
 isScheduled = true
-scheduleInput.classList.toggle("hidden")
+sendAction.value = "schedule"
+
+if(scheduleInput.classList.contains("hidden")){
+scheduleInput.classList.remove("hidden")
+scheduleBtn.innerText = "Confirmer la programmation"
+scheduleInput.focus()
+return
+}
+
+if(!scheduleInput.value){
+scheduleInput.focus()
+return
+}
+
+submitBtn.click()
+})
+
+scheduleInput.addEventListener("change", () => {
+if(scheduleInput.value){
+isScheduled = true
+sendAction.value = "schedule"
+scheduleBtn.innerText = "Confirmer la programmation"
+}
 })
 
 document.getElementById("smsForm").addEventListener("submit", () => {
 isSubmitting = true
 sendNowBtn.disabled = true
 scheduleBtn.disabled = true
-sendNowBtn.innerText = "Envoi en cours..."
+sendNowBtn.innerText = sendAction.value === "schedule" ? "Programmation..." : "Envoi en cours..."
 })
 
 </script>

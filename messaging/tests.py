@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 from io import StringIO
 from unittest.mock import patch
@@ -23,7 +24,7 @@ class SmsGatewayTests(TestCase):
         self.assertFalse(result["success"])
         self.assertIn("SMS_API_FROM", result["error"])
 
-    @override_settings(SMS_API_FROM="", SMS_API_KEY_BASE64="")
+    @override_settings(SMS_API_FROM="", SMS_API_KEY_BASE64="", SMS_API_CLIENT_ID="", SMS_API_CLIENT_SECRET="")
     def test_send_sms_accepts_explicit_sender_before_token_lookup(self):
         result = send_sms("+2250700000000", "Test", sender="TEST")
 
@@ -48,6 +49,8 @@ class SmsGatewayTests(TestCase):
         class Response:
             ok = True
             status_code = 200
+            headers = {}
+            text = ""
 
             def json(self):
                 return {"status": "SUCCESS"}
@@ -68,6 +71,8 @@ class SmsGatewayTests(TestCase):
         class Response:
             ok = True
             status_code = 200
+            headers = {}
+            text = ""
 
             def json(self):
                 return {"status": "SUCCESS"}
@@ -88,6 +93,7 @@ class SmsGatewayTests(TestCase):
         class Response:
             ok = False
             status_code = 500
+            headers = {}
             text = "{\"status\":\"ERROR\",\"message\":\"Échec de l'envoi\"}"
 
             def json(self):
@@ -337,6 +343,40 @@ class MessagingViewValidationTests(TestCase):
         self.assertIn("mis en file", str(django_messages[0]))
         self.assertEqual(msg.status, "pending")
         self.assertEqual(msg.phone, "+2250700000000")
+
+    @override_settings(SMS_API_KEY_BASE64="configured")
+    @patch("messaging.views.queue_sms_send")
+    def test_send_sms_send_now_ignores_hidden_schedule_date(self, queue_sms_send):
+        queue_sms_send.return_value = {"success": True}
+        future_date = (timezone.now() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+
+        self.client.post(
+            reverse("send_sms"),
+            {
+                "title": "Test SMS",
+                "sender": str(self.sender.id),
+                "phone": "+2250700000000",
+                "message": "Bonjour",
+                "send_action": "send_now",
+                "scheduled_at": future_date,
+            },
+        )
+
+        queue_sms_send.assert_called_once()
+        self.assertEqual(Message.objects.count(), 0)
+
+    def test_send_sms_schedule_action_requires_date(self):
+        response = self.client.post(reverse("send_sms"), {
+            "title": "Test SMS",
+            "sender": str(self.sender.id),
+            "phone": "+2250700000000",
+            "message": "Bonjour",
+            "send_action": "schedule",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Veuillez choisir une date de programmation.")
+        self.assertEqual(Message.objects.count(), 0)
 
     @override_settings(SMS_API_KEY_BASE64="configured")
     @patch("messaging.views.queue_sms_send")

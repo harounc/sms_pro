@@ -25,6 +25,7 @@ class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg mb-6 inline
 
 <!-- IMPORTANT -->
 <input type="hidden" name="submitted" value="1">
+<input type="hidden" name="send_action" id="sendAction" value="{% if request.POST.send_action %}{{ request.POST.send_action }}{% else %}send_now{% endif %}">
 
 <div class="bg-white shadow-lg rounded-xl p-6 space-y-6">
 
@@ -146,7 +147,7 @@ class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500">{{ reques
 <!-- ACTIONS -->
 <div class="flex gap-4">
 
-<button type="submit" id="sendCampaignBtn"
+<button type="button" id="sendCampaignBtn"
 class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">
 🚀 Envoyer maintenant
 </button>
@@ -163,6 +164,8 @@ value="{{ request.POST.scheduled_at }}"
 class="{% if request.POST.scheduled_at %}{% else %}hidden {% endif %}w-full border rounded-lg p-3 mt-4">
 
 </div>
+
+<button type="submit" id="submitBtn" class="hidden"></button>
 
 </form>
 
@@ -189,6 +192,8 @@ const campaignForm = document.getElementById("campaignForm")
 const sendCampaignBtn = document.getElementById("sendCampaignBtn")
 const scheduleBtn = document.getElementById("scheduleBtn")
 const scheduleInput = document.getElementById("scheduleInput")
+const submitBtn = document.getElementById("submitBtn")
+const sendAction = document.getElementById("sendAction")
 
 const selectedGroupName = document.getElementById("selectedGroupName")
 
@@ -288,14 +293,42 @@ calc()
 })
 
 /* ===== PROGRAMMATION ===== */
+sendCampaignBtn.addEventListener("click", function(){
+sendAction.value = "send_now"
+scheduleInput.value = ""
+scheduleInput.classList.add("hidden")
+submitBtn.click()
+})
+
 scheduleBtn.addEventListener("click", function(){
-scheduleInput.classList.toggle("hidden")
+sendAction.value = "schedule"
+
+if(scheduleInput.classList.contains("hidden")){
+scheduleInput.classList.remove("hidden")
+scheduleBtn.innerText = "Confirmer la programmation"
+scheduleInput.focus()
+return
+}
+
+if(!scheduleInput.value){
+scheduleInput.focus()
+return
+}
+
+submitBtn.click()
+})
+
+scheduleInput.addEventListener("change", function(){
+if(scheduleInput.value){
+sendAction.value = "schedule"
+scheduleBtn.innerText = "Confirmer la programmation"
+}
 })
 
 campaignForm.addEventListener("submit", function(){
 sendCampaignBtn.disabled = true
 scheduleBtn.disabled = true
-sendCampaignBtn.innerText = "Traitement en cours..."
+sendCampaignBtn.innerText = sendAction.value === "schedule" ? "Programmation..." : "Traitement en cours..."
 })
 
 calc()
