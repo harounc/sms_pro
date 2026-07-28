@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Company, CompanyTransaction, User
+from contacts.models import Contact, ContactGroup
 from messaging.models import Campaign, Message, Sender
 from messaging.services import send_sms_now
 from messaging.sms_gateway import send_sms, validate_sms_configuration
@@ -447,6 +448,36 @@ class MessagingViewValidationTests(TestCase):
         self.assertContains(response, "Groupe de contacts invalide.")
         self.assertContains(response, "Campagne test")
         self.assertEqual(Campaign.objects.count(), 0)
+
+    def test_contact_group_stats_returns_contact_preview_for_campaign(self):
+        group = ContactGroup.objects.create(
+            name="DT",
+            company=self.company,
+            owner=self.user,
+        )
+        Contact.objects.create(
+            company=self.company,
+            user=self.user,
+            group=group,
+            phone="+2250777186049",
+            name="CH",
+        )
+        Contact.objects.create(
+            company=self.company,
+            user=self.user,
+            group=group,
+            phone="+2250768944994",
+            name="Harouna COULIBALY",
+        )
+
+        response = self.client.get(reverse("contact_group_stats"), {"group_id": group.id})
+        payload = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["total"], 2)
+        self.assertEqual(payload["valid"], 2)
+        self.assertEqual(len(payload["contacts"]), 2)
+        self.assertEqual(payload["contacts"][0]["phone"], "+2250777186049")
 
     def test_message_history_csv_export_uses_current_filters(self):
         Message.objects.create(

@@ -107,6 +107,10 @@ class="hidden bg-gray-100 border-l-4 border-green-500 p-4 rounded-lg text-sm">
 <p>Total : <span id="excelTotalRows">0</span></p>
 <p class="text-green-600">✔ Valides : <span id="excelValidNumbers">0</span></p>
 <p class="text-red-600">✖ Invalides : <span id="excelInvalidNumbers">0</span></p>
+<div id="groupPreview" class="hidden mt-4 border-t pt-3">
+<p class="font-semibold text-gray-700 mb-2">Contacts détectés</p>
+<div id="groupPreviewList" class="space-y-1"></div>
+</div>
 
 </div>
 
@@ -204,6 +208,34 @@ const cost = document.getElementById("cost")
 
 const phoneRegex = /^\+225\d{10}$/
 
+function showGroupPreview(contacts){
+const preview = document.getElementById("groupPreview")
+const list = document.getElementById("groupPreviewList")
+list.innerHTML = ""
+
+if(!contacts || contacts.length === 0){
+preview.classList.add("hidden")
+return
+}
+
+contacts.forEach(contact => {
+const row = document.createElement("div")
+row.className = "flex items-center justify-between gap-3 text-xs bg-white border rounded px-3 py-2"
+const label = contact.name ? `${contact.name} - ${contact.phone}` : contact.phone
+const contactText = document.createElement("span")
+contactText.className = "truncate"
+contactText.textContent = label
+const statusText = document.createElement("span")
+statusText.className = `${contact.valid ? 'text-green-600' : 'text-red-600'} font-semibold`
+statusText.textContent = contact.valid ? "Valide" : "Invalide"
+row.appendChild(contactText)
+row.appendChild(statusText)
+list.appendChild(row)
+})
+
+preview.classList.remove("hidden")
+}
+
 /* ===== CALCUL ===== */
 function calc(){
 const len = msg.value.length
@@ -258,15 +290,17 @@ calc()
 })
 
 /* ===== GROUPE ===== */
-groupSelect.addEventListener("change", function(){
+function loadGroupStats(){
 
 fileInput.value = ""
 
-const selectedText = this.options[this.selectedIndex].text
+const selectedText = groupSelect.options[groupSelect.selectedIndex].text
 
-if(!this.value){
+if(!groupSelect.value){
 validRecipients = 0
 selectedGroupName.classList.add("hidden")
+document.getElementById("excelSummary").classList.add("hidden")
+showGroupPreview([])
 calc()
 return
 }
@@ -274,8 +308,11 @@ return
 selectedGroupName.innerText = "📂 Groupe sélectionné : " + selectedText
 selectedGroupName.classList.remove("hidden")
 
-fetch(`{% url 'contact_group_stats' %}?group_id=${this.value}`)
-.then(r => r.json())
+fetch(`{% url 'contact_group_stats' %}?group_id=${groupSelect.value}`)
+.then(r => {
+if(!r.ok) throw new Error("Impossible de charger le groupe sélectionné.")
+return r.json()
+})
 .then(data => {
 
 validRecipients = data.valid
@@ -285,12 +322,29 @@ document.getElementById("excelFileName").innerText = selectedText
 document.getElementById("excelTotalRows").innerText = data.total
 document.getElementById("excelValidNumbers").innerText = data.valid
 document.getElementById("excelInvalidNumbers").innerText = data.invalid
+showGroupPreview(data.contacts)
 
 calc()
 
 })
-
+.catch(() => {
+validRecipients = 0
+document.getElementById("excelSummary").classList.remove("hidden")
+document.getElementById("excelFileName").innerText = selectedText
+document.getElementById("excelTotalRows").innerText = "Erreur"
+document.getElementById("excelValidNumbers").innerText = "0"
+document.getElementById("excelInvalidNumbers").innerText = "0"
+showGroupPreview([])
+calc()
 })
+
+}
+
+groupSelect.addEventListener("change", loadGroupStats)
+
+if(groupSelect.value){
+loadGroupStats()
+}
 
 /* ===== PROGRAMMATION ===== */
 sendCampaignBtn.addEventListener("click", function(){

@@ -261,14 +261,24 @@ def contact_group_stats(request):
     if not is_company_admin(request.user):
         contacts = contacts.filter(user=request.user)
 
+    contacts = contacts.order_by("name", "phone")
     total = contacts.count()
     valid = contacts.filter(phone__regex=PHONE_REGEX.pattern).count()
     invalid = total - valid
+    preview_contacts = [
+        {
+            "phone": contact.phone,
+            "name": contact.name or "",
+            "valid": bool(PHONE_REGEX.fullmatch(contact.phone or "")),
+        }
+        for contact in contacts[:10]
+    ]
 
     return JsonResponse({
         "total": total,
         "valid": valid,
-        "invalid": invalid
+        "invalid": invalid,
+        "contacts": preview_contacts,
     })
 
 
