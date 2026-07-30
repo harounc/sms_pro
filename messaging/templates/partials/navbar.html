@@ -1,26 +1,33 @@
 {% load static %}
 
-<nav class="bg-white shadow px-8 py-4 flex justify-between items-center">
+<nav class="bg-white shadow px-4 py-3 flex justify-between items-center gap-3">
 
     <!-- Logo -->
     <div class="flex items-center space-x-3">
+
+        <button type="button"
+                onclick="toggleSidebar()"
+                class="mobile-menu-button w-10 h-10 rounded-lg bg-green-600 text-white items-center justify-center"
+                aria-label="Ouvrir le menu">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
 
         <img src="{% static 'images/logo_iss.jpg' %}"
              alt="Logo"
              class="h-10 w-auto">
 
-        <span class="text-xl font-bold text-green-600">
+        <span class="text-xl font-bold text-green-600 truncate">
             ISS SMS
         </span>
 
     </div>
 
 
-    <div class="flex items-center space-x-6">
+    <div class="flex items-center gap-3 justify-end">
 
         <!-- Entreprise -->
         {% if request.user.company %}
-        <div class="text-gray-600">
+        <div class="text-gray-600 navbar-meta">
             Entreprise :
             <span class="font-semibold">
                 {{ request.user.company.name }}
@@ -54,7 +61,7 @@
 
         {% if not request.user.is_super_admin %}
 
-        <div class="text-gray-600">
+        <div class="text-gray-600 navbar-meta">
             Solde :
 
             <span class="font-bold text-green-600">
@@ -84,7 +91,7 @@
                     {{ request.user.username|first|upper }}
                 </div>
 
-                <span class="font-semibold">
+                <span class="font-semibold user-name-full">
                     {{ request.user.username }}
                 </span>
 
