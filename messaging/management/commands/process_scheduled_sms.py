@@ -70,7 +70,11 @@ class Command(BaseCommand):
                     # ===============================
                     # 📡 ENVOI
                     # ===============================
-                    result = send_sms_api(msg.phone, msg.message)
+                    result = send_sms_api(
+                        msg.phone,
+                        msg.message,
+                        sender=msg.sender_name or None,
+                    )
 
                     if not result.get("success"):
                         api_failed = True

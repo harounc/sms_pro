@@ -320,7 +320,8 @@ def send_sms_view(request):
                     text=final_message,
                     scheduled_at=scheduled_at,
                     message_type='simple',
-                    title=title  # 🔥 IMPORTANT
+                    title=title,  # 🔥 IMPORTANT
+                    sender=sender.name,
                 )
             else:
                 result = queue_sms_send(
@@ -503,7 +504,8 @@ def campaign_upload_view(request):
                             scheduled_at=scheduled_at,
                             message_type='campaign',
                             campaign=campaign,
-                            title=title
+                            title=title,
+                            sender=sender.name,
                         )
                     else:
                         result = queue_sms_send(
@@ -563,7 +565,8 @@ def campaign_upload_view(request):
                             scheduled_at=scheduled_at,
                             message_type='campaign',
                             campaign=campaign,
-                            title=title
+                            title=title,
+                            sender=sender.name,
                         )
                     else:
                         result = queue_sms_send(

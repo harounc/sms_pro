@@ -1,8 +1,11 @@
 import base64
+import logging
 
 import requests
 from django.conf import settings
 from django.core.cache import cache
+
+logger = logging.getLogger(__name__)
 
 _TOKEN_CACHE_KEY = "sms_gateway_access_token"
 _TOKEN_CACHE_TTL = 23 * 3600  # 23 h (le token expire à 24 h)
@@ -13,6 +16,24 @@ _MTN_PREFIXES    = ("05", "06")
 _MOOV_PREFIXES   = ("01", "02")
 
 MOTEURS_VALIDES = ("ORANGE", "MTN", "MOOV")
+
+
+def _debug_enabled() -> bool:
+    return bool(getattr(settings, "SMS_API_DEBUG", False))
+
+
+def _mask_phone(phone: str) -> str:
+    if not phone:
+        return ""
+    if len(phone) <= 4:
+        return "*" * len(phone)
+    return f"{phone[:2]}****{phone[-2:]}"
+
+
+def _log_debug(message: str, **context):
+    if not _debug_enabled():
+        return
+    logger.info("SMS API DEBUG %s %s", message, context)
 
 
 def _basic_key() -> str:
@@ -75,9 +96,23 @@ def _get_token() -> str:
         data={"grant_type": "client_credentials", "scope": "api_access"},
         timeout=15,
     )
+    _log_debug(
+        "token_response",
+        status_code=resp.status_code,
+        content_type=resp.headers.get("content-type"),
+        text_prefix=resp.text[:160] if not resp.ok else "",
+    )
     resp.raise_for_status()
 
-    token = resp.json()["access_token"]
+    data = resp.json()
+    token = data["access_token"]
+    _log_debug(
+        "token_received",
+        token_type=data.get("token_type"),
+        expires_in=data.get("expires_in"),
+        scope=data.get("scope"),
+        token_length=len(token),
+    )
     cache.set(_TOKEN_CACHE_KEY, token, _TOKEN_CACHE_TTL)
     return token
 
@@ -94,7 +129,7 @@ def send_sms(phone: str, message: str, sender: str = None, moteur: str = None) -
         return {"success": False, "error": config_error}
 
     local_phone = _to_local(phone)
-    from_number = settings.SMS_API_FROM or sender
+    from_number = sender or settings.SMS_API_FROM
 
     if moteur:
         moteur = moteur.upper()
@@ -113,6 +148,14 @@ def send_sms(phone: str, message: str, sender: str = None, moteur: str = None) -
                 "msg":  message,
             }
             payload["moteur"] = moteur
+            _log_debug(
+                "send_request",
+                url=f"{settings.SMS_API_BASE_URL}/api/external/sms/send",
+                from_configured=bool(from_number),
+                to=_mask_phone(local_phone),
+                moteur=moteur,
+                message_length=len(message or ""),
+            )
 
             resp = requests.post(
                 f"{settings.SMS_API_BASE_URL}/api/external/sms/send",
@@ -122,6 +165,12 @@ def send_sms(phone: str, message: str, sender: str = None, moteur: str = None) -
                 },
                 json=payload,
                 timeout=15,
+            )
+            _log_debug(
+                "send_response",
+                status_code=resp.status_code,
+                content_type=resp.headers.get("content-type"),
+                text_prefix=resp.text[:300],
             )
 
             # Token expiré → vider le cache et réessayer une fois

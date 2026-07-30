@@ -179,6 +179,7 @@ def send_sms_now(user, phone, text, message_type='simple', title=None, campaign=
             company=company,
             campaign=campaign,
             title=title,  # 🔥 AJOUT
+            sender_name=sender or "",
             phone=phone,
             message=text,
             message_type=message_type,
@@ -204,6 +205,7 @@ def queue_sms_send(user, phone, text, message_type='simple', title=None, campaig
         company=company,
         campaign=campaign,
         title=title,
+        sender_name=sender or "",
         phone=phone,
         message=text,
         message_type=message_type,
@@ -247,7 +249,7 @@ def schedule_sms(user, phone, text, scheduled_at, message_type='simple', campaig
     return {"success": True}
 '''
 
-def schedule_sms(user, phone, text, scheduled_at, message_type='simple', title=None, campaign=None):
+def schedule_sms(user, phone, text, scheduled_at, message_type='simple', title=None, campaign=None, sender=None):
 
     company = user.company
 
@@ -262,6 +264,7 @@ def schedule_sms(user, phone, text, scheduled_at, message_type='simple', title=N
         company=company,
         campaign=campaign,
         title=title,  # 🔥 AJOUT
+        sender_name=sender or "",
         phone=phone,
         message=text,
         message_type=message_type,

@@ -45,7 +45,12 @@ def send_message_task(self, message_id, moteur=None, sender=None):
                 msg.save(update_fields=["status"])
                 return {"success": False, "error": billing.get("error")}
 
-            result = send_sms_api(msg.phone, msg.message, moteur=moteur, sender=sender)
+            result = send_sms_api(
+                msg.phone,
+                msg.message,
+                moteur=moteur,
+                sender=sender or msg.sender_name or None,
+            )
 
             if not result.get("success"):
                 api_failed = True

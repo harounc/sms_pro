@@ -45,7 +45,7 @@ class SmsGatewayTests(TestCase):
     @override_settings(SMS_API_FROM="0100000000", SMS_API_KEY_BASE64="configured")
     @patch("messaging.sms_gateway._get_token")
     @patch("messaging.sms_gateway.requests.post")
-    def test_send_sms_prefers_configured_api_sender(self, requests_post, get_token):
+    def test_send_sms_prefers_selected_sender_over_configured_api_sender(self, requests_post, get_token):
         get_token.return_value = "token"
 
         class Response:
@@ -62,7 +62,7 @@ class SmsGatewayTests(TestCase):
         result = send_sms("+2250749280591", "Bonjour", sender="TEST")
 
         self.assertTrue(result["success"])
-        self.assertEqual(requests_post.call_args.kwargs["json"]["from"], "0100000000")
+        self.assertEqual(requests_post.call_args.kwargs["json"]["from"], "TEST")
 
     @override_settings(SMS_API_FROM="0100000000", SMS_API_KEY_BASE64="configured")
     @patch("messaging.sms_gateway._get_token")
@@ -234,11 +234,12 @@ class CelerySmsTaskTests(TestCase):
             role="admin",
         )
 
-    def create_pending_message(self, status="pending"):
+    def create_pending_message(self, status="pending", sender_name=""):
         return Message.objects.create(
             user=self.user,
             company=self.company,
             title="Celery SMS",
+            sender_name=sender_name,
             phone="+2250700000000",
             message="Bonjour",
             message_type="simple",
@@ -275,6 +276,16 @@ class CelerySmsTaskTests(TestCase):
         self.assertFalse(result["success"])
         self.assertEqual(msg.status, "failed")
         self.assertEqual(self.company.balance, Decimal("100.00"))
+
+    @patch("messaging.tasks.send_sms_api")
+    def test_send_message_task_uses_persisted_sender_name(self, send_sms_api):
+        msg = self.create_pending_message(sender_name="ISS")
+        send_sms_api.return_value = {"success": True}
+
+        result = send_message_task.apply(args=[msg.id]).get()
+
+        self.assertTrue(result["success"])
+        self.assertEqual(send_sms_api.call_args.kwargs["sender"], "ISS")
 
     @patch("messaging.tasks.send_message_task.delay")
     def test_enqueue_due_scheduled_messages_marks_pending_and_queues_task(self, delay):
@@ -379,6 +390,25 @@ class MessagingViewValidationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Veuillez choisir une date de programmation.")
         self.assertEqual(Message.objects.count(), 0)
+
+    def test_send_sms_scheduled_message_stores_selected_sender(self):
+        future_date = (timezone.now() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+
+        self.client.post(
+            reverse("send_sms"),
+            {
+                "title": "Test SMS",
+                "sender": str(self.sender.id),
+                "phone": "+2250700000000",
+                "message": "Bonjour",
+                "send_action": "schedule",
+                "scheduled_at": future_date,
+            },
+        )
+
+        msg = Message.objects.get()
+        self.assertEqual(msg.status, "scheduled")
+        self.assertEqual(msg.sender_name, "TEST")
 
     @override_settings(SMS_API_KEY_BASE64="configured")
     @patch("messaging.views.queue_sms_send")

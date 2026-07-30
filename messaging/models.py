@@ -85,6 +85,7 @@ class Message(models.Model):
     )
 
     title = models.CharField(max_length=255)
+    sender_name = models.CharField(max_length=15, blank=True)
 
     phone = models.CharField(max_length=20)
     message = models.TextField()
