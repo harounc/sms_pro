@@ -912,16 +912,20 @@ def sender_create(request):
 
     if request.method == 'POST':
 
-        name = request.POST.get('name')
+        name = (request.POST.get('name') or "").strip().upper()
 
         if not name:
             messages.error(request, "Nom obligatoire")
             return redirect('sender_create')
 
+        if Sender.objects.filter(company=request.user.company, name=name).exists():
+            messages.error(request, "Cet expéditeur existe déjà pour votre entreprise.")
+            return render(request, 'messaging/sender_create.html')
+
         Sender.objects.create(
             company=request.user.company,
             created_by=request.user,
-            name=name.upper(),
+            name=name,
             status='pending'  # 🔥 IMPORTANT
         )
 
@@ -946,13 +950,19 @@ def sender_edit(request, pk):
 
     if request.method == 'POST':
 
-        name = request.POST.get('name')
+        name = (request.POST.get('name') or "").strip().upper()
 
         if not name:
             messages.error(request, "Nom obligatoire")
             return redirect('sender_edit', pk=pk)
 
-        sender.name = name.upper()
+        if Sender.objects.filter(company=request.user.company, name=name).exclude(pk=sender.pk).exists():
+            messages.error(request, "Cet expéditeur existe déjà pour votre entreprise.")
+            return render(request, 'messaging/sender_edit.html', {
+                'sender': sender
+            })
+
+        sender.name = name
         sender.status = 'pending'  # 🔥 reset validation si modifié
         sender.save()
 

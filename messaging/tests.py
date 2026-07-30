@@ -589,3 +589,37 @@ class MessagingViewValidationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "messaging/forbidden.html")
+
+    def test_sender_create_duplicate_shows_user_error(self):
+        response = self.client.post(
+            reverse("sender_create"),
+            {"name": "test"},
+            follow=True,
+        )
+
+        django_messages = list(get_messages(response.wsgi_request))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Sender.objects.filter(company=self.company, name="TEST").count(), 1)
+        self.assertTrue(any("existe déjà" in str(message) for message in django_messages))
+
+    def test_sender_edit_duplicate_shows_user_error(self):
+        other_sender = Sender.objects.create(
+            company=self.company,
+            created_by=self.user,
+            name="OTHER",
+            status="pending",
+        )
+
+        response = self.client.post(
+            reverse("sender_edit", args=[other_sender.id]),
+            {"name": "test"},
+            follow=True,
+        )
+
+        django_messages = list(get_messages(response.wsgi_request))
+        other_sender.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(other_sender.name, "OTHER")
+        self.assertTrue(any("existe déjà" in str(message) for message in django_messages))
