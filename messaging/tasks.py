@@ -78,6 +78,24 @@ def send_message_task(self, message_id, moteur=None, sender=None):
 
 
 @shared_task
+def enqueue_pending_messages(message_ids):
+    queued = 0
+    ids = list(message_ids or [])
+
+    pending_ids = (
+        Message.objects.filter(id__in=ids, status="pending")
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+
+    for message_id in pending_ids:
+        send_message_task.delay(message_id)
+        queued += 1
+
+    return {"queued": queued}
+
+
+@shared_task
 def enqueue_due_scheduled_messages(limit=500):
     now = timezone.now()
     ids = list(

@@ -221,6 +221,31 @@ def queue_sms_send(user, phone, text, message_type='simple', title=None, campaig
 
     return {"success": True, "queued": True, "message": msg}
 
+
+def create_pending_sms(user, phone, text, message_type='simple', title=None, campaign=None, sender=None):
+    company = user.company
+
+    if not company:
+        return {"success": False, "error": "Aucune entreprise associée."}
+
+    title = title or "SMS sans titre"
+    _sms_parts, total_cost = calculate_sms_cost(text)
+
+    msg = Message.objects.create(
+        user=user,
+        company=company,
+        campaign=campaign,
+        title=title,
+        sender_name=sender or "",
+        phone=phone,
+        message=text,
+        message_type=message_type,
+        status='pending',
+        cost=total_cost,
+    )
+
+    return {"success": True, "message": msg}
+
 # =========================================================
 # 🕐 PLANIFICATION
 # =========================================================

@@ -4,11 +4,12 @@ from io import BytesIO, StringIO
 from unittest.mock import patch
 
 from django.core.management import call_command
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from accounts.models import Company, CompanyTransaction, User
 from contacts.models import Contact, ContactGroup
@@ -16,6 +17,24 @@ from messaging.models import Campaign, Message, Sender
 from messaging.services import send_sms_now
 from messaging.sms_gateway import send_sms, validate_sms_configuration
 from messaging.tasks import enqueue_due_scheduled_messages, send_message_task
+
+
+def make_campaign_excel(rows):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["phone", "name"])
+    for row in rows:
+        sheet.append(row)
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    return SimpleUploadedFile(
+        "campagne.xlsx",
+        buffer.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 class SmsGatewayTests(TestCase):
@@ -479,6 +498,35 @@ class MessagingViewValidationTests(TestCase):
         self.assertContains(response, "Groupe de contacts invalide.")
         self.assertContains(response, "Campagne test")
         self.assertEqual(Campaign.objects.count(), 0)
+
+    @override_settings(SMS_API_KEY_BASE64="configured")
+    @patch("messaging.views.enqueue_pending_messages.delay")
+    def test_campaign_upload_queues_one_background_task_for_excel_contacts(self, delay):
+        upload = make_campaign_excel([
+            ["0777186049", "CH"],
+            ["0768944994", "Harouna"],
+            ["12345", "Invalid"],
+        ])
+
+        response = self.client.post(
+            reverse("campaign_upload"),
+            {
+                "title": "Campagne test",
+                "sender": str(self.sender.id),
+                "message": "Bonjour {{name}}",
+                "file": upload,
+            },
+            follow=True,
+        )
+
+        django_messages = list(get_messages(response.wsgi_request))
+        pending_ids = list(Message.objects.filter(status="pending").order_by("id").values_list("id", flat=True))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(pending_ids), 2)
+        self.assertEqual(Message.objects.filter(phone="0777186049").count(), 1)
+        delay.assert_called_once_with(pending_ids)
+        self.assertTrue(any("2 SMS mis en file" in str(message) for message in django_messages))
 
     def test_contact_group_stats_returns_contact_preview_for_campaign(self):
         group = ContactGroup.objects.create(

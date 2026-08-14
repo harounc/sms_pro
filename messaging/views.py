@@ -19,7 +19,8 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib import messages
 
-from messaging.services import queue_sms_send, schedule_sms
+from messaging.services import create_pending_sms, queue_sms_send, schedule_sms
+from messaging.tasks import enqueue_pending_messages
 from messaging.models import Message, Campaign, Sender
 from messaging.sms_gateway import validate_sms_configuration
 from accounts.models import Company, User
@@ -473,6 +474,7 @@ def campaign_upload_view(request):
         )
 
         total_sent = 0
+        pending_message_ids = []
 
         # ===============================
         # 📁 EXCEL
@@ -507,7 +509,7 @@ def campaign_upload_view(request):
                             sender=sender.name,
                         )
                     else:
-                        result = queue_sms_send(
+                        result = create_pending_sms(
                             user=request.user,
                             phone=phone,
                             text=final_message,
@@ -519,6 +521,8 @@ def campaign_upload_view(request):
 
                     if result.get("success"):
                         total_sent += 1
+                        if not scheduled_at and result.get("message"):
+                            pending_message_ids.append(result["message"].id)
                         rows_data.append({
                             "phone": phone,
                             "status": "imported"
@@ -568,7 +572,7 @@ def campaign_upload_view(request):
                             sender=sender.name,
                         )
                     else:
-                        result = queue_sms_send(
+                        result = create_pending_sms(
                             user=request.user,
                             phone=phone,
                             text=final_message,
@@ -580,6 +584,8 @@ def campaign_upload_view(request):
 
                     if result.get("success"):
                         total_sent += 1
+                        if not scheduled_at and result.get("message"):
+                            pending_message_ids.append(result["message"].id)
                         rows_data.append({
                             "phone": phone,
                             "status": "imported"
@@ -605,6 +611,7 @@ def campaign_upload_view(request):
         elif scheduled_at:
             messages.success(request, f"{total_sent} SMS programmés avec succès.")
         else:
+            enqueue_pending_messages.delay(pending_message_ids)
             messages.success(request, f"{total_sent} SMS mis en file d'envoi.")
 
         return redirect("dashboard")
