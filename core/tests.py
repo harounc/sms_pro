@@ -111,7 +111,7 @@ class DataIntegrityCommandTests(TestCase):
             company=self.company,
             user=self.user,
             group=self.group,
-            phone="0700000000",
+            phone="12345",
         )
 
         with self.assertRaises(CommandError):

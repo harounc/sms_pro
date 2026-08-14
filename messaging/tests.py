@@ -355,7 +355,7 @@ class MessagingViewValidationTests(TestCase):
         self.assertEqual(django_messages[0].tags, "success")
         self.assertIn("mis en file", str(django_messages[0]))
         self.assertEqual(msg.status, "pending")
-        self.assertEqual(msg.phone, "+2250700000000")
+        self.assertEqual(msg.phone, "0700000000")
 
     @override_settings(SMS_API_KEY_BASE64="configured")
     @patch("messaging.views.queue_sms_send")
@@ -454,7 +454,7 @@ class MessagingViewValidationTests(TestCase):
             {
                 "title": "Test SMS",
                 "sender": str(self.sender.id),
-                "phone": "0700000000",
+                "phone": "12345",
                 "message": "Bonjour",
             },
             follow=True,
@@ -508,7 +508,7 @@ class MessagingViewValidationTests(TestCase):
         self.assertEqual(payload["total"], 2)
         self.assertEqual(payload["valid"], 2)
         self.assertEqual(len(payload["contacts"]), 2)
-        self.assertEqual(payload["contacts"][0]["phone"], "+2250777186049")
+        self.assertEqual(payload["contacts"][0]["phone"], "0777186049")
 
     def test_download_campaign_model_excel(self):
         response = self.client.get(reverse("download_model"))
@@ -518,6 +518,7 @@ class MessagingViewValidationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("modele_import_campagne_sms.xlsx", response["Content-Disposition"])
         self.assertEqual([sheet.cell(1, col).value for col in range(1, 3)], ["phone", "name"])
+        self.assertEqual(sheet.cell(2, 1).value, "0777186049")
 
     def test_message_history_csv_export_uses_current_filters(self):
         Message.objects.create(

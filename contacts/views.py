@@ -1,7 +1,6 @@
 from io import BytesIO
 
 import openpyxl
-import re
 import logging
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -13,6 +12,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
 from .models import ContactGroup, Contact
+from .phone_numbers import is_valid_phone, normalize_phone, phone_lookup_values
 
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -21,7 +21,7 @@ from contacts.utils import can_access_group, is_company_admin
 
 
 logger = logging.getLogger(__name__)
-PHONE_REGEX = re.compile(r"^\+225\d{10}$")
+PHONE_FORMAT_HELP = "Format attendu : 0XXXXXXXXX."
 
 ######################
 # UTILS SÉCURITÉ
@@ -267,13 +267,13 @@ def contact_group_stats(request):
 
     contacts = contacts.order_by("name", "phone")
     total = contacts.count()
-    valid = contacts.filter(phone__regex=PHONE_REGEX.pattern).count()
+    valid = sum(1 for contact in contacts if is_valid_phone(contact.phone))
     invalid = total - valid
     preview_contacts = [
         {
-            "phone": contact.phone,
+            "phone": normalize_phone(contact.phone),
             "name": contact.name or "",
-            "valid": bool(PHONE_REGEX.fullmatch(contact.phone or "")),
+            "valid": is_valid_phone(contact.phone),
         }
         for contact in contacts[:10]
     ]
@@ -304,16 +304,16 @@ def contact_create(request, group_id):
 
     if request.method == "POST":
 
-        phone = (request.POST.get("phone") or "").strip()
+        phone = normalize_phone(request.POST.get("phone"))
         name = (request.POST.get("name") or "").strip()
         email = (request.POST.get("email") or "").strip() or None
 
-        if not PHONE_REGEX.fullmatch(phone):
-            messages.error(request, "Numéro invalide. Format attendu : +225XXXXXXXXXX.")
+        if not is_valid_phone(phone):
+            messages.error(request, f"Numéro invalide. {PHONE_FORMAT_HELP}")
             return redirect("contact_group_detail", group_id=group.id)
 
         if Contact.objects.filter(
-            phone=phone,
+            phone__in=phone_lookup_values(phone),
             user=request.user,
         ).exists():
             messages.error(request, "Ce numéro existe déjà dans vos contacts.")
@@ -382,7 +382,7 @@ def contacts_import_excel(request, group_id):
 
             try:
 
-                phone = str(row[0]).strip() if row[0] else ""
+                phone = normalize_phone(row[0])
 
                 if not phone:
                     continue
@@ -393,13 +393,13 @@ def contacts_import_excel(request, group_id):
                 total_rows += 1
 
                 # ❌ NUMERO INVALIDE
-                if not PHONE_REGEX.fullmatch(phone):
+                if not is_valid_phone(phone):
                     invalid.append(phone)
                     status = "invalid"
 
                 # 🔁 DUPLICATE
                 elif Contact.objects.filter(
-                    phone=phone,
+                    phone__in=phone_lookup_values(phone),
                     user=request.user
                 ).exists():
 
@@ -476,8 +476,8 @@ def contacts_download_model_excel(request, group_id):
 
     headers = ["phone", "name", "email"]
     examples = [
-        ["+2250777186049", "CH", "contact@example.com"],
-        ["+2250768944994", "Harouna COULIBALY", "harouna@example.com"],
+        ["0777186049", "CH", "contact@example.com"],
+        ["0768944994", "Harouna COULIBALY", "harouna@example.com"],
     ]
 
     sheet.append(headers)
@@ -521,15 +521,15 @@ def contact_edit(request, contact_id):
         return render(request, "messaging/forbidden.html")
 
     if request.method == "POST":
-        phone = (request.POST.get("phone") or "").strip()
+        phone = normalize_phone(request.POST.get("phone"))
 
-        if not PHONE_REGEX.fullmatch(phone):
-            messages.error(request, "Numéro invalide. Format attendu : +225XXXXXXXXXX.")
+        if not is_valid_phone(phone):
+            messages.error(request, f"Numéro invalide. {PHONE_FORMAT_HELP}")
             return redirect("contact_edit", contact_id=contact.id)
 
         if Contact.objects.filter(
             user=request.user,
-            phone=phone,
+            phone__in=phone_lookup_values(phone),
         ).exclude(id=contact.id).exists():
             messages.error(request, "Ce numéro existe déjà dans vos contacts.")
             return redirect("contact_edit", contact_id=contact.id)

@@ -54,7 +54,7 @@ class ContactImportTests(TestCase):
         upload = make_excel([
             ["+2250700000002", "Alice", "alice@example.com"],
             ["+2250700000001", "Duplicate", "duplicate@example.com"],
-            ["0700000000", "Invalid", "invalid@example.com"],
+            ["12345", "Invalid", "invalid@example.com"],
         ])
 
         response = self.client.post(
@@ -76,11 +76,12 @@ class ContactImportTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("modele_import_contacts.xlsx", response["Content-Disposition"])
         self.assertEqual([sheet.cell(1, col).value for col in range(1, 4)], ["phone", "name", "email"])
+        self.assertEqual(sheet.cell(2, 1).value, "0777186049")
 
     def test_contact_create_rejects_invalid_phone(self):
         response = self.client.post(
             reverse("contact_create", args=[self.group.id]),
-            {"phone": "0700000000", "name": "Bad"},
+            {"phone": "12345", "name": "Bad"},
         )
 
         self.assertRedirects(response, reverse("contact_group_detail", args=[self.group.id]))

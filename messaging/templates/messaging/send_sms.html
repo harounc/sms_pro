@@ -63,12 +63,12 @@ Destinataires <span class="text-red-500">*</span>
 name="phone"
 id="phoneInput"
 value="{{ request.POST.phone }}"
-placeholder="+2250700000001;+2250700000002"
+placeholder="0777186049;0768944994"
 required
 class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500">
 
 <p class="text-sm text-gray-500 mt-2">
-Format : +225XXXXXXXXXX séparés par ;
+Format : 0XXXXXXXXX séparés par ;
 </p>
 </div>
 
@@ -216,7 +216,7 @@ const numbers = phoneInput.value.split(";")
 
 let valid = 0
 numbers.forEach(n => {
-if(/^\+225\d{10}$/.test(n.trim())) valid++
+if(/^0\d{9}$/.test(n.trim())) valid++
 })
 
 validNumbers.innerText = valid

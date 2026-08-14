@@ -1,14 +1,10 @@
-import re
-
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import F, Q
 
 from accounts.models import Company, User
 from contacts.models import Contact
+from contacts.phone_numbers import is_valid_phone
 from messaging.models import Campaign, Message, Sender
-
-
-PHONE_REGEX = r"^\+225\d{10}$"
 
 
 class Command(BaseCommand):
@@ -79,7 +75,7 @@ class Command(BaseCommand):
         return sum(
             1
             for phone in Contact.objects.values_list("phone", flat=True)
-            if not re.fullmatch(PHONE_REGEX, phone or "")
+            if not is_valid_phone(phone)
         )
 
     def contacts_with_company_mismatch(self):

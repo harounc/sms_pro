@@ -1,4 +1,3 @@
-import re
 import csv
 import json
 import logging
@@ -25,6 +24,7 @@ from messaging.models import Message, Campaign, Sender
 from messaging.sms_gateway import validate_sms_configuration
 from accounts.models import Company, User
 from contacts.models import ContactGroup
+from contacts.phone_numbers import is_valid_phone, normalize_phone
 from accounts.forms import RechargeForm
 
 from django.db.models.functions import TruncDate
@@ -32,7 +32,6 @@ from django.db.models.functions import TruncDate
 
 # from billing.models import Recharge  # ⚠️ adapte si ton app diffère
 logger = logging.getLogger(__name__)
-PHONE_REGEX = re.compile(r"^\+225\d{10}$")
 VALID_MOTEURS = {"ORANGE", "MTN", "MOOV"}
 
 # =========================================================
@@ -290,7 +289,7 @@ def send_sms_view(request):
                 "error": scheduled_error
             })
 
-        numbers = [num.strip() for num in numbers_input.split(";") if num.strip()]
+        numbers = [normalize_phone(num) for num in numbers_input.split(";") if num.strip()]
 
         if not scheduled_at:
             config_error = validate_sms_configuration(sender=sender.name)
@@ -307,7 +306,7 @@ def send_sms_view(request):
         # ===============================
         for phone in numbers:
 
-            if not PHONE_REGEX.fullmatch(phone):
+            if not is_valid_phone(phone):
                 invalid_numbers.append(phone)
                 continue
 
@@ -482,11 +481,11 @@ def campaign_upload_view(request):
 
             for _, row in df.iterrows():
 
-                phone = str(row.get("phone", "")).strip()
+                phone = normalize_phone(row.get("phone", ""))
                 name = str(row.get("name", "")).strip()
 
                 # ❌ INVALID
-                if not PHONE_REGEX.fullmatch(phone):
+                if not is_valid_phone(phone):
                     rows_data.append({
                         "phone": phone,
                         "status": "invalid"
@@ -544,10 +543,10 @@ def campaign_upload_view(request):
 
             for contact in contacts:
 
-                phone = contact.phone
+                phone = normalize_phone(contact.phone)
                 name = contact.name or ""
 
-                if not PHONE_REGEX.fullmatch(phone):
+                if not is_valid_phone(phone):
                     rows_data.append({
                         "phone": phone,
                         "status": "invalid"
@@ -1092,8 +1091,8 @@ def download_model_excel(request):
 
     headers = ["phone", "name"]
     examples = [
-        ["+2250777186049", "CH"],
-        ["+2250768944994", "Harouna COULIBALY"],
+        ["0777186049", "CH"],
+        ["0768944994", "Harouna COULIBALY"],
     ]
 
     sheet.append(headers)
