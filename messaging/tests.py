@@ -108,6 +108,28 @@ class SmsGatewayTests(TestCase):
     @override_settings(SMS_API_FROM="0100000000", SMS_API_KEY_BASE64="configured")
     @patch("messaging.sms_gateway._get_token")
     @patch("messaging.sms_gateway.requests.post")
+    def test_send_sms_removes_control_characters_from_message(self, requests_post, get_token):
+        get_token.return_value = "token"
+
+        class Response:
+            ok = True
+            status_code = 200
+            headers = {}
+            text = ""
+
+            def json(self):
+                return {"status": "SUCCESS"}
+
+        requests_post.return_value = Response()
+
+        result = send_sms("+2250749280591", "Bonjour\r\ncher agent\tmerci", sender="TEST")
+
+        self.assertTrue(result["success"])
+        self.assertEqual(requests_post.call_args.kwargs["json"]["msg"], "Bonjour cher agent merci")
+
+    @override_settings(SMS_API_FROM="0100000000", SMS_API_KEY_BASE64="configured")
+    @patch("messaging.sms_gateway._get_token")
+    @patch("messaging.sms_gateway.requests.post")
     def test_send_sms_reports_gateway_json_error_message(self, requests_post, get_token):
         get_token.return_value = "token"
 

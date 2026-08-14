@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 
 import requests
 from django.conf import settings
@@ -16,6 +17,7 @@ _MTN_PREFIXES    = ("05", "06")
 _MOOV_PREFIXES   = ("01", "02")
 
 MOTEURS_VALIDES = ("ORANGE", "MTN", "MOOV")
+CONTROL_CHARS_REGEX = re.compile(r"[\x00-\x1f\x7f]+")
 
 
 def _debug_enabled() -> bool:
@@ -77,6 +79,10 @@ def _detect_moteur(local_phone: str) -> str:
     return "ORANGE"   # 07, 08, 09 et inconnus → Orange
 
 
+def _sanitize_message(message: str) -> str:
+    return CONTROL_CHARS_REGEX.sub(" ", str(message or "")).strip()
+
+
 def _get_token() -> str:
     """Retourne le token OAuth2 en cache, ou en récupère un nouveau."""
     basic_key = _basic_key()
@@ -129,6 +135,7 @@ def send_sms(phone: str, message: str, sender: str = None, moteur: str = None) -
         return {"success": False, "error": config_error}
 
     local_phone = _to_local(phone)
+    clean_message = _sanitize_message(message)
     from_number = sender or settings.SMS_API_FROM
 
     if moteur:
@@ -145,16 +152,17 @@ def send_sms(phone: str, message: str, sender: str = None, moteur: str = None) -
             payload = {
                 "from": from_number,
                 "to":   local_phone,
-                "msg":  message,
+                "msg":  clean_message,
             }
             payload["moteur"] = moteur
             _log_debug(
                 "send_request",
                 url=f"{settings.SMS_API_BASE_URL}/api/external/sms/send",
                 from_configured=bool(from_number),
+                from_value=from_number,
                 to=_mask_phone(local_phone),
                 moteur=moteur,
-                message_length=len(message or ""),
+                message_length=len(clean_message),
             )
 
             resp = requests.post(

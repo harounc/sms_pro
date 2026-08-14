@@ -63,6 +63,10 @@ def send_message_task(self, message_id, moteur=None, sender=None):
 
         if api_failed:
             if _should_retry(api_error):
+                if self.request.retries >= self.max_retries:
+                    Message.objects.filter(pk=message_id).update(status="failed")
+                    logger.error("SMS FAIL message=%s -> retries exceeded: %s", message_id, api_error)
+                    return {"success": False, "error": api_error}
                 raise self.retry(exc=RuntimeError(api_error))
 
             Message.objects.filter(pk=message_id).update(status="failed")
