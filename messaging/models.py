@@ -125,6 +125,49 @@ class Message(models.Model):
     def __str__(self):
         return f"{self.title} | {self.phone} | {self.status}"
 
+
+class MessageTemplate(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="message_templates")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_message_templates",
+    )
+
+    name = models.CharField(max_length=120)
+    message = models.TextField()
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "name"],
+                name="unique_message_template_per_company",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["company", "is_active"]),
+            models.Index(fields=["name"]),
+        ]
+
+    def clean(self):
+        if self.created_by and self.created_by.company != self.company:
+            raise ValidationError("Créateur invalide")
+
+    def save(self, *args, **kwargs):
+        self.name = (self.name or "").strip()
+        self.message = (self.message or "").strip()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
 # ==============================
 # SENDER
 # ==============================

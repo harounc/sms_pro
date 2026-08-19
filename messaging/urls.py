@@ -4,6 +4,8 @@ from .views import (
     admin_dashboard_view, message_history_view, senders_list, sender_create, 
     sender_edit, sender_delete,
     admin_senders, approve_sender, reject_sender,
+    message_templates_list, message_template_create,
+    message_template_edit, message_template_delete,
     message_search_api
 )
 
@@ -14,6 +16,12 @@ urlpatterns = [
     path('campaign/upload/', campaign_upload_view, name='campaign_upload'),
     path('history/', message_history_view, name='message_history'),
     path('campaign/model/', download_model_excel, name='download_model'),
+
+    # Modèles de messages
+    path('templates/', message_templates_list, name='message_templates_list'),
+    path('templates/create/', message_template_create, name='message_template_create'),
+    path('templates/<int:pk>/edit/', message_template_edit, name='message_template_edit'),
+    path('templates/<int:pk>/delete/', message_template_delete, name='message_template_delete'),
 
     # Entreprise Sender
     path('senders/', senders_list, name='senders_list'),

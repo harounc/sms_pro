@@ -14,6 +14,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.utils.dateparse import parse_datetime
+from django.db import IntegrityError
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -21,7 +22,7 @@ from django.contrib import messages
 
 from messaging.services import create_pending_sms, queue_sms_send, schedule_sms
 from messaging.tasks import enqueue_pending_messages
-from messaging.models import Message, Campaign, Sender
+from messaging.models import Campaign, Message, MessageTemplate, Sender
 from messaging.sms_gateway import validate_sms_configuration
 from accounts.models import Company, User
 from contacts.models import ContactGroup
@@ -81,6 +82,41 @@ def get_approved_sender(user, sender_id):
         company=user.company,
         status="approved",
     ).first()
+
+
+def get_message_templates(user):
+    if not user.company_id:
+        return MessageTemplate.objects.none()
+    return MessageTemplate.objects.filter(company=user.company, is_active=True)
+
+
+def can_manage_template(user, template):
+    return user.is_admin() or template.created_by_id == user.id
+
+
+def save_template_from_request(request, fallback_name, message_text):
+    if not request.user.company_id or request.POST.get("save_as_template") != "on":
+        return
+
+    name = (request.POST.get("template_name") or fallback_name or "").strip()
+    message_text = (message_text or "").strip()
+
+    if not name or not message_text:
+        return
+
+    try:
+        MessageTemplate.objects.create(
+            company=request.user.company,
+            created_by=request.user,
+            name=name,
+            message=message_text,
+        )
+        messages.success(request, "Modèle enregistré avec succès.")
+    except IntegrityError:
+        messages.warning(request, "Un modèle avec ce nom existe déjà.")
+    except Exception:
+        logger.exception("Erreur création modèle de message")
+        messages.warning(request, "Le modèle n'a pas pu être enregistré.")
 
 
 # =========================================================
@@ -207,6 +243,8 @@ def admin_dashboard_view(request):
 def send_sms_view(request):
 
     contact_groups = get_user_groups(request.user)
+    templates = get_message_templates(request.user)
+    selected_template = templates.filter(id=request.GET.get("template")).first()
 
     senders = Sender.objects.filter(
         company=request.user.company,
@@ -215,6 +253,10 @@ def send_sms_view(request):
 
     if not senders.exists():
         return render(request, "messaging/send_sms.html", {
+            "contact_groups": contact_groups,
+            "senders": senders,
+            "templates": templates,
+            "selected_template": selected_template,
             "error": "Aucun expéditeur approuvé disponible. Veuillez contacter l'administrateur."
         })
 
@@ -241,6 +283,7 @@ def send_sms_view(request):
             return render(request, "messaging/send_sms.html", {
                 "contact_groups": contact_groups,
                 "senders": senders,
+                "templates": templates,
                 "error": "Veuillez sélectionner un expéditeur approuvé."
             })
 
@@ -248,6 +291,7 @@ def send_sms_view(request):
             return render(request, "messaging/send_sms.html", {
                 "contact_groups": contact_groups,
                 "senders": senders,
+                "templates": templates,
                 "error": "Veuillez saisir au moins un numéro."
             })
 
@@ -255,6 +299,7 @@ def send_sms_view(request):
             return render(request, "messaging/send_sms.html", {
                 "contact_groups": contact_groups,
                 "senders": senders,
+                "templates": templates,
                 "error": "Le message est obligatoire."
             })
 
@@ -262,6 +307,7 @@ def send_sms_view(request):
             return render(request, "messaging/send_sms.html", {
                 "contact_groups": contact_groups,
                 "senders": senders,
+                "templates": templates,
                 "error": "Le titre est obligatoire."
             })
 
@@ -269,6 +315,7 @@ def send_sms_view(request):
             return render(request, "messaging/send_sms.html", {
                 "contact_groups": contact_groups,
                 "senders": senders,
+                "templates": templates,
                 "error": "Opérateur invalide."
             })
 
@@ -279,6 +326,7 @@ def send_sms_view(request):
             return render(request, "messaging/send_sms.html", {
                 "contact_groups": contact_groups,
                 "senders": senders,
+                "templates": templates,
                 "error": "Veuillez choisir une date de programmation."
             })
 
@@ -287,6 +335,7 @@ def send_sms_view(request):
             return render(request, "messaging/send_sms.html", {
                 "contact_groups": contact_groups,
                 "senders": senders,
+                "templates": templates,
                 "error": scheduled_error
             })
 
@@ -363,11 +412,16 @@ def send_sms_view(request):
         else:
             messages.success(request, f"{total_sent} SMS mis en file d'envoi.")
 
+        if total_sent > 0:
+            save_template_from_request(request, title, message)
+
         return redirect("dashboard")
 
     return render(request, "messaging/send_sms.html", {
         "contact_groups": contact_groups,
-        "senders": senders
+        "senders": senders,
+        "templates": templates,
+        "selected_template": selected_template,
     })
 
 
@@ -382,6 +436,8 @@ def send_sms_view(request):
 def campaign_upload_view(request):
 
     contact_groups = get_user_groups(request.user)
+    templates = get_message_templates(request.user)
+    selected_template = templates.filter(id=request.GET.get("template")).first()
 
     senders = Sender.objects.filter(
         company=request.user.company,
@@ -394,6 +450,8 @@ def campaign_upload_view(request):
         return render(request, "messaging/campaign_upload.html", {
             "contact_groups": contact_groups,
             "senders": senders,
+            "templates": templates,
+            "selected_template": selected_template,
             "error": error,
         })
 
@@ -614,12 +672,130 @@ def campaign_upload_view(request):
             enqueue_pending_messages.delay(pending_message_ids)
             messages.success(request, f"{total_sent} SMS mis en file d'envoi.")
 
+        if total_sent > 0:
+            save_template_from_request(request, title, message_text)
+
         return redirect("dashboard")
 
 
     return render(request, "messaging/campaign_upload.html", {
         "contact_groups": contact_groups,
-        "senders": senders
+        "senders": senders,
+        "templates": templates,
+        "selected_template": selected_template,
+    })
+
+
+# =========================================================
+# MODELES DE MESSAGES
+# =========================================================
+
+@login_required
+def message_templates_list(request):
+    if not request.user.company_id:
+        return render(request, "messaging/forbidden.html")
+
+    templates = get_message_templates(request.user).select_related("created_by")
+
+    query = (request.GET.get("q") or "").strip()
+    if query:
+        templates = templates.filter(
+            Q(name__icontains=query) |
+            Q(message__icontains=query)
+        )
+
+    return render(request, "messaging/message_templates_list.html", {
+        "templates": templates,
+        "query": query,
+    })
+
+
+@login_required
+def message_template_create(request):
+    if not request.user.company_id:
+        return render(request, "messaging/forbidden.html")
+
+    if request.method == "POST":
+        name = (request.POST.get("name") or "").strip()
+        message = (request.POST.get("message") or "").strip()
+
+        if not name or not message:
+            messages.error(request, "Le nom et le message sont obligatoires.")
+            return render(request, "messaging/message_template_form.html", {
+                "mode": "create",
+                "name": name,
+                "message_text": message,
+            })
+
+        try:
+            MessageTemplate.objects.create(
+                company=request.user.company,
+                created_by=request.user,
+                name=name,
+                message=message,
+            )
+            messages.success(request, "Modèle créé avec succès.")
+            return redirect("message_templates_list")
+        except IntegrityError:
+            messages.error(request, "Un modèle avec ce nom existe déjà.")
+
+    return render(request, "messaging/message_template_form.html", {
+        "mode": "create",
+    })
+
+
+@login_required
+def message_template_edit(request, pk):
+    template = get_object_or_404(
+        MessageTemplate,
+        pk=pk,
+        company=request.user.company,
+        is_active=True,
+    )
+
+    if not can_manage_template(request.user, template):
+        return render(request, "messaging/forbidden.html")
+
+    if request.method == "POST":
+        template.name = (request.POST.get("name") or "").strip()
+        template.message = (request.POST.get("message") or "").strip()
+
+        if not template.name or not template.message:
+            messages.error(request, "Le nom et le message sont obligatoires.")
+        else:
+            try:
+                template.save()
+                messages.success(request, "Modèle modifié avec succès.")
+                return redirect("message_templates_list")
+            except IntegrityError:
+                messages.error(request, "Un modèle avec ce nom existe déjà.")
+
+    return render(request, "messaging/message_template_form.html", {
+        "mode": "edit",
+        "template": template,
+    })
+
+
+@login_required
+def message_template_delete(request, pk):
+    template = get_object_or_404(
+        MessageTemplate,
+        pk=pk,
+        company=request.user.company,
+        is_active=True,
+    )
+
+    if not can_manage_template(request.user, template):
+        return render(request, "messaging/forbidden.html")
+
+    if request.method == "POST":
+        template.is_active = False
+        template.save(update_fields=["is_active", "updated_at"])
+        messages.success(request, "Modèle supprimé avec succès.")
+        return redirect("message_templates_list")
+
+    return render(request, "messaging/message_template_delete.html", {
+        "template": template,
     })
 
 

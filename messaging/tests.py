@@ -13,7 +13,7 @@ from openpyxl import Workbook, load_workbook
 
 from accounts.models import Company, CompanyTransaction, User
 from contacts.models import Contact, ContactGroup
-from messaging.models import Campaign, Message, Sender
+from messaging.models import Campaign, Message, MessageTemplate, Sender
 from messaging.services import send_sms_now
 from messaging.sms_gateway import send_sms, validate_sms_configuration
 from messaging.tasks import enqueue_due_scheduled_messages, send_message_task
@@ -520,6 +520,58 @@ class MessagingViewValidationTests(TestCase):
         self.assertContains(response, "Groupe de contacts invalide.")
         self.assertContains(response, "Campagne test")
         self.assertEqual(Campaign.objects.count(), 0)
+
+    def test_message_template_create_and_list(self):
+        response = self.client.post(
+            reverse("message_template_create"),
+            {
+                "name": "Rappel paiement",
+                "message": "Bonjour, merci de régulariser votre paiement.",
+            },
+            follow=True,
+        )
+
+        template = MessageTemplate.objects.get()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(template.company, self.company)
+        self.assertEqual(template.created_by, self.user)
+        self.assertContains(response, "Rappel paiement")
+
+    def test_send_sms_prefills_selected_message_template(self):
+        template = MessageTemplate.objects.create(
+            company=self.company,
+            created_by=self.user,
+            name="Info paie",
+            message="Votre paie est disponible.",
+        )
+
+        response = self.client.get(reverse("send_sms"), {"template": template.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Info paie")
+        self.assertContains(response, "Votre paie est disponible.")
+
+    @override_settings(SMS_API_KEY_BASE64="configured")
+    @patch("messaging.views.queue_sms_send")
+    def test_send_sms_can_save_current_message_as_template(self, queue_sms_send):
+        queue_sms_send.return_value = {"success": True}
+
+        response = self.client.post(
+            reverse("send_sms"),
+            {
+                "title": "Info RH",
+                "sender": str(self.sender.id),
+                "phone": "0777186049",
+                "message": "Bonjour, réunion à 10h.",
+                "save_as_template": "on",
+                "template_name": "Réunion RH",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(MessageTemplate.objects.filter(name="Réunion RH").exists())
 
     @override_settings(SMS_API_KEY_BASE64="configured")
     @patch("messaging.views.enqueue_pending_messages.delay")

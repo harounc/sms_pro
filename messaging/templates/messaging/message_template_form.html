@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "edit" %}Modifier le modèle{% else %}Créer un modèle{% endif %}{% endblock %}
+
+{% block content %}
+
+<div class="max-w-3xl mx-auto space-y-6">
+
+<h2 class="text-2xl font-bold text-green-600">
+{% if mode == "edit" %}Modifier le modèle{% else %}Créer un modèle{% endif %}
+</h2>
+
+<div class="bg-white border shadow rounded-lg p-6">
+<form method="POST" class="space-y-5">
+{% csrf_token %}
+
+<div>
+<label class="block font-semibold mb-2">Nom du modèle</label>
+<input type="text"
+       name="name"
+       required
+       maxlength="120"
+       value="{{ request.POST.name|default:template.name|default:name }}"
+       placeholder="Ex: Rappel paiement"
+       class="border rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500">
+</div>
+
+<div>
+<label class="block font-semibold mb-2">Message</label>
+<textarea name="message"
+          id="templateMessage"
+          required
+          rows="8"
+          placeholder="Votre message..."
+          class="border rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500">{{ request.POST.message|default:template.message|default:message_text }}</textarea>
+<div class="text-sm text-gray-500 mt-2">
+Caractères : <span id="charCount">0</span> · SMS : <span id="smsCount">0</span>
+</div>
+</div>
+
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+<button type="submit"
+        class="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition">
+    <i data-lucide="save" class="w-4 h-4"></i>
+    Enregistrer
+</button>
+
+<a href="{% url 'message_templates_list' %}"
+   class="inline-flex items-center justify-center gap-2 px-6 py-3 border rounded-lg hover:bg-gray-50">
+    <i data-lucide="x" class="w-4 h-4"></i>
+    Annuler
+</a>
+</div>
+
+</form>
+</div>
+
+</div>
+
+<script>
+const templateMessage = document.getElementById("templateMessage")
+const charCount = document.getElementById("charCount")
+const smsCount = document.getElementById("smsCount")
+
+function refreshStats(){
+const len = templateMessage.value.length
+charCount.innerText = len
+smsCount.innerText = Math.ceil(len / 160) || 0
+}
+
+templateMessage.addEventListener("input", refreshStats)
+refreshStats()
+</script>
+
+{% endblock %}

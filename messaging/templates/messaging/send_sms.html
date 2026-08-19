@@ -30,7 +30,7 @@
 Titre <span class="text-red-500">*</span>
 </label>
 <input type="text" name="title" required
-value="{{ request.POST.title }}"
+value="{% if request.POST.title %}{{ request.POST.title }}{% elif selected_template %}{{ selected_template.name }}{% endif %}"
 placeholder="Ex: Rappel client"
 class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500">
 </div>
@@ -72,7 +72,7 @@ Format : 0XXXXXXXXX séparés par ;
 </p>
 </div>
 
-<!-- TEMPLATE
+<!-- MODELE -->
 <div>
 <label class="block font-semibold text-gray-700 mb-2">
 Modèle
@@ -82,13 +82,14 @@ Modèle
 class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500">
 <option value="">Choisir un modèle</option>
 {% for template in templates %}
-<option value="{{ template.message }}">{{ template.name }}</option>
+<option value="{{ template.message|escape }}"
+        data-title="{{ template.name|escape }}"
+        {% if selected_template and selected_template.id == template.id %}selected{% endif %}>
+{{ template.name }}
+</option>
 {% endfor %}
 </select>
 </div>
--->
-
-
 
 <!-- OPERATEUR -->
 <div>
@@ -115,7 +116,24 @@ Message <span class="text-red-500">*</span>
 id="messageInput"
 required
 placeholder="Votre message..."
-class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500">{{ request.POST.message }}</textarea>
+class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500">{% if request.POST.message %}{{ request.POST.message }}{% elif selected_template %}{{ selected_template.message }}{% endif %}</textarea>
+</div>
+
+<!-- ENREGISTRER MODELE -->
+<div class="border rounded-lg p-4 bg-orange-50/50">
+<label class="inline-flex items-center gap-2 font-semibold text-gray-700">
+<input type="checkbox" name="save_as_template" id="saveTemplateToggle"
+       class="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+       {% if request.POST.save_as_template %}checked{% endif %}>
+Enregistrer comme modèle
+</label>
+
+<input type="text"
+       name="template_name"
+       id="templateNameInput"
+       value="{% if request.POST.template_name %}{{ request.POST.template_name }}{% elif request.POST.title %}{{ request.POST.title }}{% elif selected_template %}{{ selected_template.name }}{% endif %}"
+       placeholder="Nom du modèle"
+       class="mt-3 w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500 {% if request.POST.save_as_template %}{% else %}hidden{% endif %}">
 </div>
 
 <!-- STATS -->
@@ -241,14 +259,24 @@ phoneInput.addEventListener("input", calculate)
 
 calculate()
 
-/* TEMPLATE
-document.getElementById("templateSelect").addEventListener("change", function(){
+const titleInput = document.querySelector('input[name="title"]')
+const templateSelect = document.getElementById("templateSelect")
+const saveTemplateToggle = document.getElementById("saveTemplateToggle")
+const templateNameInput = document.getElementById("templateNameInput")
+
+templateSelect.addEventListener("change", function(){
 if(this.value){
 messageInput.value = this.value
+const title = this.options[this.selectedIndex].dataset.title || ""
+if(title && !titleInput.value) titleInput.value = title
 calculate()
 }
 })
-*/
+
+saveTemplateToggle.addEventListener("change", function(){
+templateNameInput.classList.toggle("hidden", !this.checked)
+if(this.checked && !templateNameInput.value) templateNameInput.value = titleInput.value
+})
 
 /* ACTIONS */
 sendNowBtn.addEventListener("click", () => {

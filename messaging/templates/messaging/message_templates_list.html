@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Modèles{% endblock %}
+
+{% block content %}
+
+<div class="max-w-6xl mx-auto space-y-6">
+
+<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<h2 class="text-2xl font-bold text-green-600">Modèles de messages</h2>
+
+<a href="{% url 'message_template_create' %}"
+   class="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg transition shadow">
+    <i data-lucide="plus" class="w-4 h-4"></i>
+    Créer
+</a>
+</div>
+
+<form method="GET" class="bg-white border rounded-lg p-4">
+<div class="flex flex-col gap-3 sm:flex-row">
+<input type="text"
+       name="q"
+       value="{{ query }}"
+       placeholder="Rechercher..."
+       class="border rounded-lg p-3 flex-1 focus:outline-none focus:ring-2 focus:ring-green-500">
+<button type="submit"
+        class="inline-flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-900 text-white px-5 py-3 rounded-lg">
+    <i data-lucide="search" class="w-4 h-4"></i>
+    Rechercher
+</button>
+</div>
+</form>
+
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+{% for template in templates %}
+<article class="bg-white border shadow-sm rounded-lg p-5 space-y-4">
+<div class="flex items-start justify-between gap-3">
+<div class="min-w-0">
+<h3 class="font-bold text-gray-900 truncate">{{ template.name }}</h3>
+<p class="text-xs text-gray-500">
+{{ template.created_by.username|default:"-" }} · {{ template.updated_at|date:"d/m/Y H:i" }}
+</p>
+</div>
+</div>
+
+<p class="text-sm text-gray-700 whitespace-pre-line line-clamp-5">{{ template.message }}</p>
+
+<div class="flex flex-wrap gap-2 pt-2 border-t">
+<a href="{% url 'send_sms' %}?template={{ template.id }}"
+   class="inline-flex items-center gap-2 px-3 py-2 rounded bg-orange-50 text-orange-700 text-sm font-semibold hover:bg-orange-100">
+    <i data-lucide="message-square" class="w-4 h-4"></i>
+    SMS
+</a>
+<a href="{% url 'campaign_upload' %}?template={{ template.id }}"
+   class="inline-flex items-center gap-2 px-3 py-2 rounded bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100">
+    <i data-lucide="megaphone" class="w-4 h-4"></i>
+    Campagne
+</a>
+
+{% if request.user.role == "admin" or template.created_by_id == request.user.id %}
+<a href="{% url 'message_template_edit' template.id %}"
+   class="inline-flex items-center gap-2 px-3 py-2 rounded bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100">
+    <i data-lucide="pencil" class="w-4 h-4"></i>
+    Modifier
+</a>
+<a href="{% url 'message_template_delete' template.id %}"
+   class="inline-flex items-center gap-2 px-3 py-2 rounded bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100">
+    <i data-lucide="trash-2" class="w-4 h-4"></i>
+    Supprimer
+</a>
+{% endif %}
+</div>
+</article>
+{% empty %}
+<div class="bg-white border rounded-lg p-8 text-center text-gray-500 md:col-span-2 xl:col-span-3">
+Aucun modèle trouvé
+</div>
+{% endfor %}
+</div>
+
+</div>
+
+{% endblock %}
