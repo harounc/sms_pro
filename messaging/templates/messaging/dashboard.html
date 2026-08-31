@@ -25,7 +25,7 @@
 </div>
 
 <!-- ================= KPI ================= -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-10">
 
     <div class="bg-white shadow rounded-xl p-6 text-center border-t-4 border-green-500">
         <p class="text-gray-500 text-sm">Solde</p>
@@ -61,6 +61,60 @@
             {{ total_spent|floatformat:2 }} FCFA
         </p>
     </div>
+
+    <div class="bg-white shadow rounded-xl p-6 text-center border-t-4 border-emerald-500">
+        <p class="text-gray-500 text-sm">Rechargé aujourd’hui</p>
+        <p class="text-2xl font-bold text-emerald-600 mt-2">
+            {{ total_user_recharges_today|default:0 }} FCFA
+        </p>
+    </div>
+
+</div>
+
+<!-- ================= RECHARGES USERS ================= -->
+<div class="bg-white shadow rounded-xl p-6 mb-10">
+
+    <h3 class="text-xl font-bold mb-4 text-green-600">
+        {% if request.user.role == "admin" %}
+            Recharges utilisateurs récentes
+        {% else %}
+            Mes recharges récentes
+        {% endif %}
+    </h3>
+
+    {% if recent_user_recharges %}
+    <table class="w-full text-sm">
+
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="p-2 text-left">Date</th>
+                {% if request.user.role == "admin" %}
+                <th class="p-2 text-left">Utilisateur</th>
+                {% endif %}
+                <th class="p-2 text-left">Montant</th>
+                <th class="p-2 text-left">Fait par</th>
+                <th class="p-2 text-left">Description</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for recharge in recent_user_recharges %}
+            <tr class="border-t">
+                <td class="p-2 text-gray-500">{{ recharge.created_at|date:"d/m/Y H:i" }}</td>
+                {% if request.user.role == "admin" %}
+                <td class="p-2 font-semibold">{{ recharge.user.get_full_name|default:recharge.user.username }}</td>
+                {% endif %}
+                <td class="p-2 text-green-600 font-semibold">+{{ recharge.amount }} FCFA</td>
+                <td class="p-2">{{ recharge.created_by.username|default:"-" }}</td>
+                <td class="p-2 text-gray-600">{{ recharge.description|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+    {% else %}
+        <p class="text-gray-400 text-center">Aucune recharge récente</p>
+    {% endif %}
 
 </div>
 

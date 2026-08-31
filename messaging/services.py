@@ -71,6 +71,7 @@ def apply_billing(user, company, cost, phone, sms_parts):
                 user=user,
                 amount=cost,
                 transaction_type='debit',
+                created_by=user,
                 description=f"SMS envoyé à {phone} ({sms_parts} SMS)"
             )
 
@@ -98,6 +99,7 @@ def apply_billing(user, company, cost, phone, sms_parts):
                 company=company,
                 amount=cost,
                 transaction_type='debit',
+                created_by=user,
                 description=f"SMS envoyé à {phone} ({sms_parts} SMS)"
             )
 

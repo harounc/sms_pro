@@ -102,9 +102,18 @@ def accounts_dashboard_view(request):
         sms_count=Count("message", filter=Q(message__status="sent"))
     ).order_by("-sms_count")[:5]
 
+    total_recharged_today = CompanyTransaction.objects.filter(
+        transaction_type="credit",
+        created_at__date=today,
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    total_recharged_all = CompanyTransaction.objects.filter(
+        transaction_type="credit"
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
     recent_recharges = CompanyTransaction.objects.filter(
         transaction_type="credit"
-    ).select_related("company").order_by("-created_at")[:10]
+    ).select_related("company", "created_by").order_by("-created_at")[:10]
 
     context = {
         "total_companies": total_companies,
@@ -114,6 +123,8 @@ def accounts_dashboard_view(request):
         "sms_today": sms_today,
         "active_users": active_users,
         "total_balance": total_balance,
+        "total_recharged_today": total_recharged_today,
+        "total_recharged_all": total_recharged_all,
         "top_companies": top_companies,
         "top_users": top_users,
         "recent_recharges": recent_recharges,
@@ -253,6 +264,7 @@ def company_recharge_view(request, pk):
                     company=company,
                     amount=amount,
                     transaction_type="credit",
+                    created_by=request.user,
                     description="Recharge entreprise"
                 )
 
@@ -377,6 +389,7 @@ def company_user_recharge_view(request, company_id, user_id):
                     company=company,
                     amount=amount,
                     transaction_type='debit',
+                    created_by=request.user,
                     description=f"Recharge utilisateur {target_user.username}"
                 )
 
@@ -385,6 +398,7 @@ def company_user_recharge_view(request, company_id, user_id):
                     user=target_user,
                     amount=amount,
                     transaction_type='credit',
+                    created_by=request.user,
                     description="Recharge utilisateur"
                 )
 

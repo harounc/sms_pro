@@ -130,6 +130,14 @@ class CompanyTransaction(models.Model):
         choices=TRANSACTION_TYPES
     )
 
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_company_transactions",
+    )
+
     description = models.CharField(max_length=255, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -166,6 +174,14 @@ class UserCreditTransaction(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
 
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_user_credit_transactions",
+    )
 
     description = models.CharField(max_length=255, blank=True)
 

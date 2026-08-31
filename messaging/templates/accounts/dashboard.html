@@ -28,7 +28,7 @@
 
 </div>
 
-<div class="grid grid-cols-3 gap-6 mt-6">
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-6">
 
     <div class="bg-white p-4 rounded shadow border-l-4 border-blue-500">
         <h3 class="text-sm text-gray-600">SMS aujourd'hui</h3>
@@ -43,6 +43,16 @@
     <div class="bg-white p-4 rounded shadow border-l-4 border-purple-500">
         <h3 class="text-sm text-gray-600">Solde total</h3>
         <p class="text-2xl font-bold text-purple-600">{{ total_balance }} FCFA</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow border-l-4 border-green-500">
+        <h3 class="text-sm text-gray-600">Recharges aujourd'hui</h3>
+        <p class="text-2xl font-bold text-green-600">{{ total_recharged_today }} FCFA</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow border-l-4 border-orange-500">
+        <h3 class="text-sm text-gray-600">Total rechargé</h3>
+        <p class="text-2xl font-bold text-orange-500">{{ total_recharged_all }} FCFA</p>
     </div>
 
 </div>
@@ -109,7 +119,7 @@
 
 <div class="mt-8 bg-white rounded shadow">
     <div class="p-4 border-b">
-        <h3 class="font-semibold">Historique des rechargements</h3>
+        <h3 class="font-semibold">Historique des rechargements entreprises</h3>
     </div>
 
     <div class="p-4">
@@ -119,6 +129,7 @@
                     <th class="py-2">Date</th>
                     <th class="py-2">Entreprise</th>
                     <th class="py-2">Montant</th>
+                    <th class="py-2">Fait par</th>
                     <th class="py-2">Statut</th>
                 </tr>
             </thead>
@@ -128,13 +139,14 @@
                     <td class="py-2">{{ recharge.created_at|date:"d/m/Y H:i" }}</td>
                     <td class="py-2">{{ recharge.company.name }}</td>
                     <td class="py-2 text-green-600 font-semibold">+{{ recharge.amount }}</td>
+                    <td class="py-2">{{ recharge.created_by.username|default:"-" }}</td>
                     <td class="py-2">
                         <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Crédit</span>
                     </td>
                 </tr>
                 {% empty %}
                 <tr class="border-t">
-                    <td class="py-3" colspan="4">Aucun rechargement récent</td>
+                    <td class="py-3" colspan="5">Aucun rechargement récent</td>
                 </tr>
                 {% endfor %}
             </tbody>

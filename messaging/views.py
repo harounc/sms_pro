@@ -24,7 +24,7 @@ from messaging.services import create_pending_sms, queue_sms_send, schedule_sms
 from messaging.tasks import enqueue_pending_messages
 from messaging.models import Campaign, Message, MessageTemplate, Sender
 from messaging.sms_gateway import validate_sms_configuration
-from accounts.models import Company, User
+from accounts.models import Company, User, UserCreditTransaction
 from contacts.models import ContactGroup
 from contacts.phone_numbers import is_valid_phone, normalize_phone
 from accounts.forms import RechargeForm
@@ -833,9 +833,29 @@ def dashboard_view(request):
     if user.role == "admin":
         messages_qs = Message.objects.filter(company=company)
         balance = getattr(company, "balance", 0)
+        recent_user_recharges = UserCreditTransaction.objects.filter(
+            company=company,
+            transaction_type="credit",
+        ).select_related("user", "created_by").order_by("-created_at")[:10]
+        total_user_recharges_today = UserCreditTransaction.objects.filter(
+            company=company,
+            transaction_type="credit",
+            created_at__date=today,
+        ).aggregate(total=Sum("amount"))["total"] or 0
     else:
         messages_qs = Message.objects.filter(company=company, user=user)
         balance = getattr(user, "credit_balance", 0)
+        recent_user_recharges = UserCreditTransaction.objects.filter(
+            company=company,
+            user=user,
+            transaction_type="credit",
+        ).select_related("user", "created_by").order_by("-created_at")[:10]
+        total_user_recharges_today = UserCreditTransaction.objects.filter(
+            company=company,
+            user=user,
+            transaction_type="credit",
+            created_at__date=today,
+        ).aggregate(total=Sum("amount"))["total"] or 0
 
     # ===============================
     # STATISTIQUES
@@ -940,6 +960,8 @@ def dashboard_view(request):
         "sms_today": sms_today,
         "scheduled_sms": scheduled_sms,
         "total_spent": total_spent,
+        "recent_user_recharges": recent_user_recharges,
+        "total_user_recharges_today": total_user_recharges_today,
 
         "recent_simple": recent_simple,
         "recent_campaign": recent_campaign,

@@ -42,7 +42,26 @@ class AccountRechargeTests(TestCase):
         self.company.refresh_from_db()
         self.assertEqual(self.company.balance, Decimal("150.00"))
         self.assertEqual(CompanyTransaction.objects.count(), 1)
-        self.assertEqual(CompanyTransaction.objects.first().transaction_type, "credit")
+        transaction = CompanyTransaction.objects.first()
+        self.assertEqual(transaction.transaction_type, "credit")
+        self.assertEqual(transaction.created_by, self.super_admin)
+
+    def test_super_admin_dashboard_shows_company_recharge_history(self):
+        CompanyTransaction.objects.create(
+            company=self.company,
+            amount=Decimal("50.00"),
+            transaction_type="credit",
+            created_by=self.super_admin,
+            description="Recharge entreprise",
+        )
+        self.client.force_login(self.super_admin)
+
+        response = self.client.get(reverse("accounts_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Historique des rechargements entreprises")
+        self.assertContains(response, "Recharge Co")
+        self.assertContains(response, "super")
 
     def test_company_admin_cannot_recharge_company_directly(self):
         self.client.force_login(self.admin)
@@ -73,6 +92,26 @@ class AccountRechargeTests(TestCase):
         self.assertEqual(self.user.credit_balance, Decimal("40.00"))
         self.assertEqual(CompanyTransaction.objects.count(), 1)
         self.assertEqual(UserCreditTransaction.objects.count(), 1)
+        self.assertEqual(CompanyTransaction.objects.first().created_by, self.admin)
+        self.assertEqual(UserCreditTransaction.objects.first().created_by, self.admin)
+
+    def test_company_admin_dashboard_shows_user_recharge_history(self):
+        UserCreditTransaction.objects.create(
+            company=self.company,
+            user=self.user,
+            amount=Decimal("40.00"),
+            transaction_type="credit",
+            created_by=self.admin,
+            description="Recharge utilisateur",
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recharges utilisateurs récentes")
+        self.assertContains(response, "agent")
+        self.assertContains(response, "admin")
 
     def test_user_recharge_with_insufficient_company_balance_does_not_mutate_balances(self):
         self.client.force_login(self.admin)
