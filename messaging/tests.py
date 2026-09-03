@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.core.management.base import CommandError
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import mail
 from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -273,6 +274,7 @@ class CelerySmsTaskTests(TestCase):
         self.user = User.objects.create_user(
             username="celery-admin",
             password="password",
+            email="admin@example.com",
             company=self.company,
             role="admin",
         )
@@ -306,9 +308,10 @@ class CelerySmsTaskTests(TestCase):
         self.assertIsNotNone(msg.sent_at)
         self.assertEqual(self.company.balance, Decimal("81.00"))
 
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     @patch("messaging.tasks.send_sms_api")
     def test_send_message_task_api_failure_rolls_back_billing(self, send_sms_api):
-        msg = self.create_pending_message()
+        msg = self.create_pending_message(sender_name="ISSERVICES")
         send_sms_api.return_value = {"success": False, "error": "Erreur API gateway"}
 
         result = send_message_task.apply(args=[msg.id], kwargs={"sender": "TEST"}).get()
@@ -322,6 +325,12 @@ class CelerySmsTaskTests(TestCase):
         self.assertEqual(msg.attempt_count, 1)
         self.assertIsNotNone(msg.last_attempt_at)
         self.assertEqual(self.company.balance, Decimal("100.00"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["admin@example.com"])
+        self.assertIn("Erreur API gateway", mail.outbox[0].body)
+        self.assertIn("Celery SMS", mail.outbox[0].body)
+        self.assertIn("+2250700000000", mail.outbox[0].body)
+        self.assertIn("ISSERVICES", mail.outbox[0].body)
 
     @patch("messaging.tasks.send_sms_api")
     def test_send_message_task_uses_persisted_sender_name(self, send_sms_api):

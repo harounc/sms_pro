@@ -6,6 +6,7 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from messaging.models import Message
+from messaging.alerts import send_sms_failure_alert
 from messaging.services import apply_billing, calculate_sms_cost, send_sms_api
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def _mark_failed(message_id, reason):
         failure_reason=str(reason or "Erreur inconnue")[:2000],
         last_attempt_at=timezone.now(),
     )
+    send_sms_failure_alert(message_id, reason)
 
 
 def _clear_failure(msg):
@@ -45,6 +47,10 @@ def send_message_task(self, message_id, moteur=None, sender=None):
     api_error = None
 
     try:
+        status = Message.objects.filter(pk=message_id).values_list("status", flat=True).first()
+        if status not in {"pending", "scheduled"}:
+            return {"success": True, "skipped": True, "status": status}
+
         _mark_attempt(message_id)
 
         with transaction.atomic():
@@ -68,6 +74,7 @@ def send_message_task(self, message_id, moteur=None, sender=None):
                 msg.failure_reason = billing.get("error", "Erreur de facturation")
                 msg.last_attempt_at = timezone.now()
                 msg.save(update_fields=["status", "failure_reason", "last_attempt_at"])
+                send_sms_failure_alert(msg.id, msg.failure_reason)
                 return {"success": False, "error": billing.get("error")}
 
             result = send_sms_api(

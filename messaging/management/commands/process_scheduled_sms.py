@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.db import models, transaction
 
 from messaging.models import Message
+from messaging.alerts import send_sms_failure_alert
 from messaging.services import send_sms_api, apply_billing, calculate_sms_cost
 
 class Command(BaseCommand):
@@ -68,6 +69,7 @@ class Command(BaseCommand):
                         msg.failure_reason = billing.get("error", "Erreur de facturation")
                         msg.last_attempt_at = timezone.now()
                         msg.save(update_fields=["status", "failure_reason", "last_attempt_at"])
+                        send_sms_failure_alert(msg.id, msg.failure_reason)
                         self.stdout.write(
                             self.style.WARNING(
                                 f"SMS #{msg.id} echec facturation: {billing.get('error')}"
@@ -108,6 +110,7 @@ class Command(BaseCommand):
                         failure_reason=str(api_error or "Erreur API gateway")[:2000],
                         last_attempt_at=timezone.now(),
                     )
+                    send_sms_failure_alert(msg.pk, api_error)
                     self.stdout.write(
                         self.style.ERROR(f"SMS #{msg.id} echec API: {api_error}")
                     )
@@ -121,6 +124,7 @@ class Command(BaseCommand):
                 msg.failure_reason = str(e)[:2000]
                 msg.last_attempt_at = timezone.now()
                 msg.save(update_fields=["status", "failure_reason", "last_attempt_at"])
+                send_sms_failure_alert(msg.id, msg.failure_reason)
 
         self.stdout.write(
             self.style.SUCCESS(
