@@ -15,6 +15,7 @@ from openpyxl import Workbook, load_workbook
 from accounts.models import Company, CompanyTransaction, User
 from contacts.models import Contact, ContactGroup
 from messaging.models import Campaign, Message, MessageTemplate, Sender
+from messaging.runtime import get_sms_runtime_status
 from messaging.services import send_sms_now
 from messaging.sms_gateway import send_sms, validate_sms_configuration
 from messaging.tasks import enqueue_due_scheduled_messages, send_message_task
@@ -405,6 +406,62 @@ class SmsRuntimeCheckTests(TestCase):
 
         with self.assertRaises(CommandError):
             call_command("check_sms_runtime", stdout=StringIO())
+
+
+class SmsRuntimeDashboardStatusTests(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(
+            name="Runtime Dashboard Co",
+            balance=Decimal("100.00"),
+        )
+        self.other_company = Company.objects.create(
+            name="Other Runtime Co",
+            balance=Decimal("100.00"),
+        )
+        self.user = User.objects.create_user(
+            username="runtime-dashboard-admin",
+            password="password",
+            company=self.company,
+            role="admin",
+        )
+        self.other_user = User.objects.create_user(
+            username="other-runtime-admin",
+            password="password",
+            company=self.other_company,
+            role="admin",
+        )
+
+    def create_message(self, company, user, status="pending"):
+        return Message.objects.create(
+            user=user,
+            company=company,
+            title="Runtime Dashboard SMS",
+            phone="0700000000",
+            message="Bonjour",
+            message_type="simple",
+            status=status,
+            cost=Decimal("19.00"),
+        )
+
+    def test_runtime_status_can_be_scoped_to_one_company(self):
+        self.create_message(self.company, self.user, status="pending")
+        self.create_message(self.other_company, self.other_user, status="pending")
+
+        status = get_sms_runtime_status(
+            Message.objects.filter(company=self.company),
+            include_celery=False,
+        )
+
+        self.assertEqual(status["pending_count"], 1)
+
+    @patch("messaging.runtime.current_app")
+    def test_runtime_status_marks_celery_inactive_without_crashing(self, current_app):
+        current_app.control.inspect.return_value.ping.side_effect = RuntimeError("Redis down")
+
+        status = get_sms_runtime_status(include_celery=True)
+
+        self.assertFalse(status["celery_ok"])
+        self.assertFalse(status["ok"])
 
 
 class MessagingViewValidationTests(TestCase):

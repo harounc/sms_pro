@@ -81,8 +81,14 @@ class Command(BaseCommand):
             )
 
         if not options["skip_celery"]:
-            inspector = current_app.control.inspect(timeout=5)
-            pings = inspector.ping() or {}
+            try:
+                inspector = current_app.control.inspect(timeout=5)
+                pings = inspector.ping() or {}
+            except Exception as exc:
+                pings = {}
+                self.stderr.write(
+                    self.style.WARNING(f"Ping Celery impossible: {exc}")
+                )
             self.stdout.write(f"Workers Celery detectes: {len(pings)}")
             if not pings:
                 errors.append("Aucun worker Celery ne repond au ping.")

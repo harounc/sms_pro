@@ -23,6 +23,7 @@ from django.contrib import messages
 from messaging.services import create_pending_sms, queue_sms_send, schedule_sms
 from messaging.tasks import enqueue_pending_messages
 from messaging.models import Campaign, Message, MessageTemplate, Sender
+from messaging.runtime import get_sms_runtime_status
 from messaging.sms_gateway import validate_sms_configuration
 from accounts.models import Company, User, UserCreditTransaction
 from contacts.models import ContactGroup
@@ -880,6 +881,11 @@ def dashboard_view(request):
         status="scheduled"
     ).count()
 
+    sms_runtime_status = get_sms_runtime_status(
+        messages_qs,
+        include_celery=(user.role == "admin"),
+    )
+
     # ===============================
     # RECENTS
     # ===============================
@@ -962,6 +968,7 @@ def dashboard_view(request):
         "total_spent": total_spent,
         "recent_user_recharges": recent_user_recharges,
         "total_user_recharges_today": total_user_recharges_today,
+        "sms_runtime_status": sms_runtime_status,
 
         "recent_simple": recent_simple,
         "recent_campaign": recent_campaign,

@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
 from messaging.models import Message
+from messaging.runtime import get_sms_runtime_status
 
 from .models import Company, User, CompanyTransaction, UserCreditTransaction
 from .forms import (
@@ -115,6 +116,8 @@ def accounts_dashboard_view(request):
         transaction_type="credit"
     ).select_related("company", "created_by").order_by("-created_at")[:10]
 
+    sms_runtime_status = get_sms_runtime_status(Message.objects.all(), include_celery=True)
+
     context = {
         "total_companies": total_companies,
         "active_companies": active_companies,
@@ -128,6 +131,7 @@ def accounts_dashboard_view(request):
         "top_companies": top_companies,
         "top_users": top_users,
         "recent_recharges": recent_recharges,
+        "sms_runtime_status": sms_runtime_status,
     }
 
     return render(request, "accounts/dashboard.html", context)

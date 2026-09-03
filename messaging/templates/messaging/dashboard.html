@@ -71,6 +71,62 @@
 
 </div>
 
+<!-- ================= ETAT RUNTIME SMS ================= -->
+<div class="bg-white shadow rounded-xl p-6 mb-10 border-l-4 {% if sms_runtime_status.ok %}border-green-500{% else %}border-red-500{% endif %}">
+    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
+        <div>
+            <h3 class="text-xl font-bold text-green-600">État des envois SMS</h3>
+            <p class="text-sm text-gray-500">
+                {% if request.user.role == "admin" %}
+                    Vue entreprise
+                {% else %}
+                    Vue utilisateur
+                {% endif %}
+            </p>
+        </div>
+        <span class="text-sm font-semibold px-3 py-1 rounded-full {% if sms_runtime_status.ok %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+            {% if sms_runtime_status.ok %}OK{% else %}Attention{% endif %}
+        </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {% if request.user.role == "admin" %}
+        <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs text-gray-500">Service d'envoi</p>
+            <p class="font-bold {% if sms_runtime_status.celery_ok %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if sms_runtime_status.celery_ok %}Actif{% else %}Inactif{% endif %}
+            </p>
+        </div>
+        {% endif %}
+        <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs text-gray-500">SMS en attente</p>
+            <p class="font-bold text-gray-800">{{ sms_runtime_status.pending_count }}</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs text-gray-500">Plus ancien pending</p>
+            <p class="font-bold text-gray-800">
+                {% if sms_runtime_status.oldest_pending_age_minutes is not None %}
+                    {{ sms_runtime_status.oldest_pending_age_minutes }} min
+                {% else %}
+                    -
+                {% endif %}
+            </p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs text-gray-500">Programmés bloqués</p>
+            <p class="font-bold {% if sms_runtime_status.due_scheduled_count %}text-red-600{% else %}text-gray-800{% endif %}">
+                {{ sms_runtime_status.due_scheduled_count }}
+            </p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs text-gray-500">Échecs aujourd'hui</p>
+            <p class="font-bold {% if sms_runtime_status.failed_today_count %}text-orange-600{% else %}text-gray-800{% endif %}">
+                {{ sms_runtime_status.failed_today_count }}
+            </p>
+        </div>
+    </div>
+</div>
+
 <!-- ================= RECHARGES USERS ================= -->
 <div class="bg-white shadow rounded-xl p-6 mb-10">
 

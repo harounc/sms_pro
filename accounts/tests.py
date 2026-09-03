@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
@@ -46,7 +47,18 @@ class AccountRechargeTests(TestCase):
         self.assertEqual(transaction.transaction_type, "credit")
         self.assertEqual(transaction.created_by, self.super_admin)
 
-    def test_super_admin_dashboard_shows_company_recharge_history(self):
+    @patch("accounts.views.get_sms_runtime_status")
+    def test_super_admin_dashboard_shows_company_recharge_history(self, runtime_status):
+        runtime_status.return_value = {
+            "ok": True,
+            "celery_ok": True,
+            "celery_workers": 1,
+            "pending_count": 0,
+            "oldest_pending_age_minutes": None,
+            "due_scheduled_count": 0,
+            "failed_today_count": 0,
+            "sent_today_count": 0,
+        }
         CompanyTransaction.objects.create(
             company=self.company,
             amount=Decimal("50.00"),
@@ -62,6 +74,8 @@ class AccountRechargeTests(TestCase):
         self.assertContains(response, "Historique des rechargements entreprises")
         self.assertContains(response, "Recharge Co")
         self.assertContains(response, "super")
+        self.assertContains(response, "État des envois SMS")
+        self.assertContains(response, "Vue globale plateforme")
 
     def test_company_admin_cannot_recharge_company_directly(self):
         self.client.force_login(self.admin)
@@ -95,7 +109,18 @@ class AccountRechargeTests(TestCase):
         self.assertEqual(CompanyTransaction.objects.first().created_by, self.admin)
         self.assertEqual(UserCreditTransaction.objects.first().created_by, self.admin)
 
-    def test_company_admin_dashboard_shows_user_recharge_history(self):
+    @patch("messaging.views.get_sms_runtime_status")
+    def test_company_admin_dashboard_shows_user_recharge_history(self, runtime_status):
+        runtime_status.return_value = {
+            "ok": True,
+            "celery_ok": True,
+            "celery_workers": 1,
+            "pending_count": 0,
+            "oldest_pending_age_minutes": None,
+            "due_scheduled_count": 0,
+            "failed_today_count": 0,
+            "sent_today_count": 0,
+        }
         UserCreditTransaction.objects.create(
             company=self.company,
             user=self.user,
@@ -112,6 +137,8 @@ class AccountRechargeTests(TestCase):
         self.assertContains(response, "Recharges utilisateurs récentes")
         self.assertContains(response, "agent")
         self.assertContains(response, "admin")
+        self.assertContains(response, "État des envois SMS")
+        self.assertContains(response, "Vue entreprise")
 
     def test_user_recharge_with_insufficient_company_balance_does_not_mutate_balances(self):
         self.client.force_login(self.admin)
