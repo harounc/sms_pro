@@ -318,6 +318,9 @@ class CelerySmsTaskTests(TestCase):
 
         self.assertFalse(result["success"])
         self.assertEqual(msg.status, "failed")
+        self.assertEqual(msg.failure_reason, "Erreur API gateway")
+        self.assertEqual(msg.attempt_count, 1)
+        self.assertIsNotNone(msg.last_attempt_at)
         self.assertEqual(self.company.balance, Decimal("100.00"))
 
     @patch("messaging.tasks.send_sms_api")
@@ -431,7 +434,7 @@ class SmsRuntimeDashboardStatusTests(TestCase):
             role="admin",
         )
 
-    def create_message(self, company, user, status="pending"):
+    def create_message(self, company, user, status="pending", failure_reason=""):
         return Message.objects.create(
             user=user,
             company=company,
@@ -441,6 +444,8 @@ class SmsRuntimeDashboardStatusTests(TestCase):
             message_type="simple",
             status=status,
             cost=Decimal("19.00"),
+            failure_reason=failure_reason,
+            last_attempt_at=timezone.now() if failure_reason else None,
         )
 
     def test_runtime_status_can_be_scoped_to_one_company(self):
@@ -453,6 +458,24 @@ class SmsRuntimeDashboardStatusTests(TestCase):
         )
 
         self.assertEqual(status["pending_count"], 1)
+
+    def test_runtime_status_includes_recent_failure_reasons(self):
+        self.create_message(
+            self.company,
+            self.user,
+            status="failed",
+            failure_reason="HTTP 500 : Echec de l'envoi",
+        )
+
+        status = get_sms_runtime_status(
+            Message.objects.filter(company=self.company),
+            include_celery=False,
+        )
+
+        self.assertFalse(status["ok"])
+        self.assertEqual(status["failed_today_count"], 1)
+        self.assertEqual(status["recent_failures"][0]["failure_reason"], "HTTP 500 : Echec de l'envoi")
+        self.assertEqual(status["failure_reasons"][0]["total"], 1)
 
     @patch("messaging.runtime.current_app")
     def test_runtime_status_marks_celery_inactive_without_crashing(self, current_app):
@@ -788,9 +811,20 @@ class MessagingViewValidationTests(TestCase):
             cost=Decimal("19.00"),
             scheduled_at=timezone.now(),
         )
+        Message.objects.create(
+            user=self.user,
+            company=self.company,
+            title="Failed",
+            phone="+2250100000000",
+            message="Bonjour echec",
+            message_type="simple",
+            status="failed",
+            cost=Decimal("19.00"),
+            failure_reason="HTTP 500 : Echec de l'envoi",
+            last_attempt_at=timezone.now(),
+        )
 
         response = self.client.get(reverse("message_history"), {
-            "status": "sent",
             "export": "csv",
         })
 
@@ -800,7 +834,8 @@ class MessagingViewValidationTests(TestCase):
         self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
         self.assertIn("historique_messages.csv", response["Content-Disposition"])
         self.assertIn("Export CSV", content)
-        self.assertNotIn("Scheduled", content)
+        self.assertIn("raison_echec", content)
+        self.assertIn("HTTP 500 : Echec de l'envoi", content)
 
     def test_message_search_api_returns_title(self):
         Message.objects.create(
@@ -821,6 +856,7 @@ class MessagingViewValidationTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Recherche titre")
+        self.assertIn("failure_reason", payload["results"][0])
 
     def test_simple_user_cannot_manage_senders(self):
         simple_user = User.objects.create_user(

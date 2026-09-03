@@ -1058,6 +1058,9 @@ def message_history_view(request):
             "date_programmee",
             "date_envoi",
             "campagne",
+            "tentatives",
+            "date_derniere_tentative",
+            "raison_echec",
         ])
 
         for msg in qs.select_related("campaign")[:5000]:
@@ -1072,6 +1075,9 @@ def message_history_view(request):
                 msg.scheduled_at.strftime("%Y-%m-%d %H:%M:%S") if msg.scheduled_at else "",
                 msg.sent_at.strftime("%Y-%m-%d %H:%M:%S") if msg.sent_at else "",
                 msg.campaign.name if msg.campaign else "",
+                msg.attempt_count,
+                msg.last_attempt_at.strftime("%Y-%m-%d %H:%M:%S") if msg.last_attempt_at else "",
+                msg.failure_reason,
             ])
 
         return response
@@ -1402,6 +1408,7 @@ def message_search_api(request):
             "status": m.status,
             "type": m.message_type,
             "cost": float(m.cost),
+            "failure_reason": m.failure_reason,
             "date": m.created_at.strftime("%d/%m %H:%M"),
             "campaign": m.campaign.name if m.campaign else None,
         })

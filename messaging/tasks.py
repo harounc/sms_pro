@@ -2,13 +2,34 @@ import logging
 
 from celery.exceptions import MaxRetriesExceededError
 from celery import shared_task
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from messaging.models import Message
 from messaging.services import apply_billing, calculate_sms_cost, send_sms_api
 
 logger = logging.getLogger(__name__)
+
+
+def _mark_attempt(message_id):
+    Message.objects.filter(pk=message_id).update(
+        last_attempt_at=timezone.now(),
+        attempt_count=models.F("attempt_count") + 1,
+    )
+
+
+def _mark_failed(message_id, reason):
+    Message.objects.filter(pk=message_id).update(
+        status="failed",
+        failure_reason=str(reason or "Erreur inconnue")[:2000],
+        last_attempt_at=timezone.now(),
+    )
+
+
+def _clear_failure(msg):
+    msg.failure_reason = ""
+    msg.last_attempt_at = timezone.now()
+    msg.save(update_fields=["status", "sent_at", "failure_reason", "last_attempt_at"])
 
 
 def _should_retry(error):
@@ -24,6 +45,8 @@ def send_message_task(self, message_id, moteur=None, sender=None):
     api_error = None
 
     try:
+        _mark_attempt(message_id)
+
         with transaction.atomic():
             msg = Message.objects.select_for_update().select_related("user", "company").get(pk=message_id)
 
@@ -42,7 +65,9 @@ def send_message_task(self, message_id, moteur=None, sender=None):
 
             if not billing.get("success"):
                 msg.status = "failed"
-                msg.save(update_fields=["status"])
+                msg.failure_reason = billing.get("error", "Erreur de facturation")
+                msg.last_attempt_at = timezone.now()
+                msg.save(update_fields=["status", "failure_reason", "last_attempt_at"])
                 return {"success": False, "error": billing.get("error")}
 
             result = send_sms_api(
@@ -59,24 +84,24 @@ def send_message_task(self, message_id, moteur=None, sender=None):
             else:
                 msg.status = "sent"
                 msg.sent_at = timezone.now()
-                msg.save(update_fields=["status", "sent_at"])
+                _clear_failure(msg)
 
         if api_failed:
             if _should_retry(api_error):
                 if self.request.retries >= self.max_retries:
-                    Message.objects.filter(pk=message_id).update(status="failed")
+                    _mark_failed(message_id, api_error)
                     logger.error("SMS FAIL message=%s -> retries exceeded: %s", message_id, api_error)
                     return {"success": False, "error": api_error}
                 raise self.retry(exc=RuntimeError(api_error))
 
-            Message.objects.filter(pk=message_id).update(status="failed")
+            _mark_failed(message_id, api_error)
             logger.error("SMS FAIL message=%s -> %s", message_id, api_error)
             return {"success": False, "error": api_error}
 
         return {"success": True}
 
     except MaxRetriesExceededError:
-        Message.objects.filter(pk=message_id).update(status="failed")
+        _mark_failed(message_id, "Retries exceeded")
         logger.error("SMS FAIL message=%s -> retries exceeded", message_id)
         return {"success": False, "error": "Retries exceeded"}
 

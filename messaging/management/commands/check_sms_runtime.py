@@ -96,6 +96,15 @@ class Command(BaseCommand):
         if errors:
             for error in errors:
                 self.stderr.write(self.style.ERROR(error))
+            failures = Message.objects.filter(status="failed").exclude(failure_reason="").order_by(
+                "-last_attempt_at", "-created_at"
+            )[:5]
+            for failure in failures:
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"SMS #{failure.id} {failure.phone}: {failure.failure_reason[:200]}"
+                    )
+                )
             raise CommandError("Controle runtime SMS en erreur.")
 
         self.stdout.write(self.style.SUCCESS("Controle runtime SMS OK."))

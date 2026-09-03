@@ -97,6 +97,10 @@ class Message(models.Model):
 
     scheduled_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+
+    failure_reason = models.TextField(blank=True)
+    attempt_count = models.PositiveIntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -108,6 +112,7 @@ class Message(models.Model):
             models.Index(fields=['scheduled_at']),
             models.Index(fields=['message_type']),
             models.Index(fields=['title']),
+            models.Index(fields=['status', 'last_attempt_at']),
         ]
 
     def clean(self):

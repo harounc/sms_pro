@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.db import transaction
+from django.db import models, transaction
 
 from messaging.models import Message
 from messaging.services import send_sms_api, apply_billing, calculate_sms_cost
@@ -39,6 +39,12 @@ class Command(BaseCommand):
                         continue
 
                     processed += 1
+                    Message.objects.filter(pk=msg.pk).update(
+                        last_attempt_at=timezone.now(),
+                        attempt_count=models.F("attempt_count") + 1,
+                    )
+                    msg.refresh_from_db()
+
                     self.stdout.write(
                         f"Traitement SMS #{msg.id} - user={msg.user_id} cost={msg.cost}"
                     )
@@ -59,7 +65,9 @@ class Command(BaseCommand):
                     if not billing.get("success"):
                         failed += 1
                         msg.status = "failed"
-                        msg.save(update_fields=["status"])
+                        msg.failure_reason = billing.get("error", "Erreur de facturation")
+                        msg.last_attempt_at = timezone.now()
+                        msg.save(update_fields=["status", "failure_reason", "last_attempt_at"])
                         self.stdout.write(
                             self.style.WARNING(
                                 f"SMS #{msg.id} echec facturation: {billing.get('error')}"
@@ -86,14 +94,20 @@ class Command(BaseCommand):
                         # ===============================
                         msg.status = "sent"
                         msg.sent_at = timezone.now()
-                        msg.save(update_fields=["status", "sent_at"])
+                        msg.failure_reason = ""
+                        msg.last_attempt_at = timezone.now()
+                        msg.save(update_fields=["status", "sent_at", "failure_reason", "last_attempt_at"])
 
                         sent += 1
                         self.stdout.write(self.style.SUCCESS(f"SMS #{msg.id} envoye"))
 
                 if api_failed:
                     failed += 1
-                    Message.objects.filter(pk=msg.pk).update(status="failed")
+                    Message.objects.filter(pk=msg.pk).update(
+                        status="failed",
+                        failure_reason=str(api_error or "Erreur API gateway")[:2000],
+                        last_attempt_at=timezone.now(),
+                    )
                     self.stdout.write(
                         self.style.ERROR(f"SMS #{msg.id} echec API: {api_error}")
                     )
@@ -104,7 +118,9 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"SMS #{msg.id} erreur: {e}"))
 
                 msg.status = "failed"
-                msg.save(update_fields=["status"])
+                msg.failure_reason = str(e)[:2000]
+                msg.last_attempt_at = timezone.now()
+                msg.save(update_fields=["status", "failure_reason", "last_attempt_at"])
 
         self.stdout.write(
             self.style.SUCCESS(

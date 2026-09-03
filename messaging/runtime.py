@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from celery import current_app
+from django.db.models import Count
 from django.utils import timezone
 
 from messaging.models import Message
@@ -23,6 +24,21 @@ def get_sms_runtime_status(messages_qs=None, include_celery=True):
         status="failed",
         created_at__date=now.date(),
     ).count()
+
+    recent_failures = list(
+        qs.filter(status="failed")
+        .exclude(failure_reason="")
+        .order_by("-last_attempt_at", "-created_at")
+        .values("id", "phone", "title", "failure_reason", "last_attempt_at", "created_at")[:5]
+    )
+
+    failure_reasons = list(
+        qs.filter(status="failed")
+        .exclude(failure_reason="")
+        .values("failure_reason")
+        .annotate(total=Count("id"))
+        .order_by("-total")[:3]
+    )
 
     sent_today_count = qs.filter(
         status="sent",
@@ -52,6 +68,7 @@ def get_sms_runtime_status(messages_qs=None, include_celery=True):
             oldest_pending
             and oldest_pending.created_at < now - timedelta(minutes=10)
         )
+        or failed_today_count > 0
         or celery_ok is False
     )
 
@@ -64,5 +81,7 @@ def get_sms_runtime_status(messages_qs=None, include_celery=True):
         "due_scheduled_count": due_scheduled_count,
         "failed_today_count": failed_today_count,
         "sent_today_count": sent_today_count,
+        "recent_failures": recent_failures,
+        "failure_reasons": failure_reasons,
         "checked_at": now,
     }

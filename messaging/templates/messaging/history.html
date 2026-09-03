@@ -71,6 +71,7 @@
 <th class="p-3">Message</th>
 <th class="p-3">Statut</th>
 <th class="p-3">Coût</th>
+<th class="p-3">Diagnostic</th>
 </tr>
 </thead>
 
@@ -84,6 +85,15 @@
 <td class="p-3 truncate max-w-xs">{{ m.message }}</td>
 <td class="p-3">{{ m.status }}</td>
 <td class="p-3">{{ m.cost|floatformat:2 }}</td>
+<td class="p-3 max-w-sm">
+    {% if m.status == "failed" and m.failure_reason %}
+        <span class="text-orange-700">{{ m.failure_reason|truncatechars:120 }}</span>
+    {% elif m.attempt_count %}
+        <span class="text-gray-500">{{ m.attempt_count }} tentative(s)</span>
+    {% else %}
+        <span class="text-gray-400">-</span>
+    {% endif %}
+</td>
 </tr>
 {% endfor %}
 
@@ -141,7 +151,7 @@ input.addEventListener("keyup", function() {
             if (data.results.length === 0) {
                 tableBody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center p-4 text-gray-500">
+                    <td colspan="7" class="text-center p-4 text-gray-500">
                         Aucun résultat
                     </td>
                 </tr>`
@@ -158,6 +168,7 @@ input.addEventListener("keyup", function() {
                     <td class="p-3 truncate max-w-xs">${m.message}</td>
                     <td class="p-3">${m.status}</td>
                     <td class="p-3">${m.cost}</td>
+                    <td class="p-3">${m.failure_reason || "-"}</td>
                 </tr>`
             })
 

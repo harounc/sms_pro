@@ -125,6 +125,23 @@
             </p>
         </div>
     </div>
+
+    {% if sms_runtime_status.recent_failures %}
+    <div class="mt-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Dernières erreurs</h4>
+        <div class="space-y-2">
+            {% for failure in sms_runtime_status.recent_failures %}
+            <div class="rounded-lg bg-orange-50 p-3 text-sm">
+                <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                    <span class="font-semibold text-orange-800">{{ failure.title }} - {{ failure.phone }}</span>
+                    <span class="text-orange-700">SMS #{{ failure.id }}</span>
+                </div>
+                <p class="mt-1 text-orange-800">{{ failure.failure_reason|truncatechars:160 }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- ================= RECHARGES USERS ================= -->
