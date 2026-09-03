@@ -3,6 +3,7 @@ from decimal import Decimal
 from io import BytesIO, StringIO
 from unittest.mock import patch
 
+from django.core.management.base import CommandError
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.messages import get_messages
@@ -339,6 +340,71 @@ class CelerySmsTaskTests(TestCase):
         self.assertEqual(result["queued"], 1)
         self.assertEqual(msg.status, "pending")
         delay.assert_called_once_with(msg.id)
+
+
+class SmsRuntimeCheckTests(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(
+            name="Runtime Company",
+            balance=Decimal("100.00"),
+        )
+        self.user = User.objects.create_user(
+            username="runtime-admin",
+            password="password",
+            company=self.company,
+            role="admin",
+        )
+
+    def create_message(self, status="pending", created_at=None, scheduled_at=None):
+        msg = Message.objects.create(
+            user=self.user,
+            company=self.company,
+            title="Runtime SMS",
+            phone="0700000000",
+            message="Bonjour",
+            message_type="simple",
+            status=status,
+            cost=Decimal("19.00"),
+            scheduled_at=scheduled_at,
+        )
+        if created_at:
+            Message.objects.filter(pk=msg.pk).update(created_at=created_at)
+            msg.refresh_from_db()
+        return msg
+
+    def test_runtime_check_passes_without_pending_messages(self):
+        out = StringIO()
+
+        call_command("check_sms_runtime", "--skip-celery", stdout=out)
+
+        self.assertIn("Controle runtime SMS OK", out.getvalue())
+
+    def test_runtime_check_fails_when_pending_message_is_too_old(self):
+        self.create_message(created_at=timezone.now() - timedelta(minutes=30))
+
+        with self.assertRaises(CommandError):
+            call_command(
+                "check_sms_runtime",
+                "--skip-celery",
+                "--max-pending-age-minutes=10",
+                stdout=StringIO(),
+            )
+
+    def test_runtime_check_fails_when_due_scheduled_messages_are_not_processed(self):
+        self.create_message(
+            status="scheduled",
+            scheduled_at=timezone.now() - timedelta(minutes=5),
+        )
+
+        with self.assertRaises(CommandError):
+            call_command("check_sms_runtime", "--skip-celery", stdout=StringIO())
+
+    @patch("messaging.management.commands.check_sms_runtime.current_app")
+    def test_runtime_check_fails_when_no_celery_worker_answers(self, current_app):
+        current_app.control.inspect.return_value.ping.return_value = None
+
+        with self.assertRaises(CommandError):
+            call_command("check_sms_runtime", stdout=StringIO())
 
 
 class MessagingViewValidationTests(TestCase):

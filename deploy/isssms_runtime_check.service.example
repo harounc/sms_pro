@@ -1,0 +1,11 @@
+[Unit]
+Description=Controle runtime ISS SMS
+After=network.target redis-server.service mysql.service
+
+[Service]
+Type=oneshot
+User=isssms
+Group=www-data
+WorkingDirectory=/srv/iss-sms
+EnvironmentFile=/srv/iss-sms/.env
+ExecStart=/srv/iss-sms/.venv/bin/python manage.py check_sms_runtime --max-pending=100 --max-pending-age-minutes=10

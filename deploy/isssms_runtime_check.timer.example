@@ -1,0 +1,10 @@
+[Unit]
+Description=Lance le controle runtime ISS SMS toutes les 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=isssms_runtime_check.service
+
+[Install]
+WantedBy=timers.target
